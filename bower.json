@@ -1,0 +1,28 @@
+{
+  "name": "purescript-truffle-pet-shop",
+  "description": "",
+  "main": "index.js",
+  "authors": [
+    "Jens Krause"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "PureScript"
+  ],
+  "moduleType": [],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "purescript-halogen": "^3.1.3",
+    "purescript-affjax": "^5.0.0",
+    "purescript-foreign-generic": "^5.0.1",
+    "purescript-console": "^3.0.0"
+  }
+}
