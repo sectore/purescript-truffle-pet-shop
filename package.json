@@ -10,7 +10,8 @@
     "server:dev": "rimraf output && NODE_ENV=development npm run server:webpack",
     "server:prod": "rimraf output && NODE_ENV=production npm run server:webpack",
     "build:prod": "rimraf dist && mkdir dist && NODE_ENV=production ./node_modules/.bin/webpack --config webpack.config.babel.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generator": "pulp build --src-path generator -m Generator --to generator.js && mkdir -p contracts/abis && node generator.js --abis contracts/abis --dest src --module Contracts && rm generator.js"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
   },
   "homepage": "https://github.com/sectore/purescript-truffle-pet-shop#readme",
   "dependencies": {
+    "crypto-js": "^3.1.9-1"
   },
   "devDependencies": {
     "babel-core": "^6.24.0",
