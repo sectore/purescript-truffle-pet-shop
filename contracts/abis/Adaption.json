@@ -1,20 +1,6 @@
 [
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "getAdopters",
-		"outputs": [
-			{
-				"name": "",
-				"type": "address[16]"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
 		"inputs": [
 			{
 				"name": "",
@@ -49,6 +35,20 @@
 		],
 		"payable": false,
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getAdopters",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address[16]"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
 		"type": "function"
 	}
 ]
