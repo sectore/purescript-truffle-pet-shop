@@ -8,22 +8,29 @@ module Component.Pets
 import Prelude
 
 import Component.Pet as P
-import Control.Monad.Aff (Aff)
-import Control.Monad.Except (runExcept)
+import Control.Error.Util (hush)
+import Control.Monad.Aff (Aff, liftEff')
+import Control.Monad.Aff.Console (log)
+import Control.Monad.Except (lift, runExcept)
 import Data.Either (Either(..))
 import Data.Foreign (MultipleErrors)
 import Data.Foreign.Generic (decodeJSON)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Network.Ethereum.Web3 (Address, BlockNumber, metamaskProvider, runWeb3)
+import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
 import Network.HTTP.Affjax as AX
+import Types (Fx)
 
 type State =
   { loading :: Boolean
   , result :: Either MultipleErrors Pets
+  , blockNumber :: Maybe BlockNumber
+  , accounts :: Maybe (Array Address)
   }
 
 type Pets = Array P.Pet
@@ -36,10 +43,9 @@ data Query a
   = FetchPets a
   | HandlePetMessage P.PetId P.Message a
 
+type PetsFx = Aff Fx
 
-type Fx eff = Aff (ajax :: AX.AJAX | eff)
-
-view :: forall e. H.Component HH.HTML Query Unit Void (Fx e)
+view :: H.Component HH.HTML Query Unit Void PetsFx
 view = H.parentComponent
   { initialState: const initialState
   , render
@@ -52,9 +58,11 @@ view = H.parentComponent
   initialState =
     { loading: false
     , result: Right []
+    , blockNumber: Nothing
+    , accounts: Nothing
     }
 
-  render :: State -> H.ParentHTML Query P.Query PetSlot (Fx e)
+  render :: State -> H.ParentHTML Query P.Query PetSlot PetsFx
   render st =
     HH.div
       [ HP.class_ $ ClassName "row" ]
@@ -65,6 +73,8 @@ view = H.parentComponent
             [ HH.text "Pet Shop" ]
         , HH.br_
         , HH.br_
+        , HH.p_ [ HH.text $ "Accounts: " <> maybe "unknown account" show st.accounts ]
+        , HH.p_ [ HH.text $ "Block no.: " <> maybe "unknown block" show st.blockNumber ]
         , HH.div_
             [ case st.result of
                 Left e ->
@@ -77,7 +87,7 @@ view = H.parentComponent
           ]
       ]
 
-  renderPet :: P.Pet -> H.ParentHTML Query P.Query PetSlot (Fx e)
+  renderPet :: P.Pet -> H.ParentHTML Query P.Query PetSlot PetsFx
   renderPet p@(P.Pet pet) =
     HH.slot
       (PetSlot pet.id)
@@ -85,12 +95,22 @@ view = H.parentComponent
       unit
     (HE.input (HandlePetMessage pet.id))
 
-  eval :: Query ~> H.ParentDSL State Query P.Query PetSlot Void (Fx e)
+  eval :: Query ~> H.ParentDSL State Query P.Query PetSlot Void PetsFx
   eval (FetchPets next) = do
       H.modify (_ { loading = true })
       r <- H.liftAff $ AX.get ("./json/pets.json")
+      provider <- lift $ liftEff' metamaskProvider
+      -- get block number
+      bn <- lift $ hush <$> runWeb3 provider eth_blockNumber
+      -- get accounts
+      acc <- lift $ hush <$> runWeb3 provider eth_getAccounts
+      _ <- lift $ log $ "acc: " <> show acc
+      gp <- lift $ hush <$> runWeb3 provider eth_gasPrice
+      _ <- lift $ log $ "gas price: " <> show gp
       H.modify (_ { loading = false
                   , result = runExcept $ decodeJSON r.response
+                  , accounts = acc
+                  , blockNumber = bn
                   })
       pure next
   eval (HandlePetMessage p msg next) = do

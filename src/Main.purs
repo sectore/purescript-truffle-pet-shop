@@ -9,12 +9,11 @@ import Control.Monad.Error.Class (throwError)
 import DOM.Node.ParentNode (QuerySelector(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Halogen as H
-import Halogen.Aff (HalogenEffects) as HA
 import Halogen.Aff.Util (awaitBody, runHalogenAff, selectElement) as HA
 import Halogen.VDom.Driver (runUI) as HD
-import Network.HTTP.Affjax (AJAX)
+import Types (Fx)
 
-main :: Eff (HA.HalogenEffects (ajax :: AJAX)) Unit
+main :: Eff Fx Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
   el <- HA.selectElement $ QuerySelector "#app"

@@ -13,8 +13,17 @@ _...work in progress..._
 yarn
 ```
 
-- Generate `Adaption` contract in `PureScript` by using [`purescript-web3-generator`](https://github.com/f-o-a-m/purescript-web3-generator) (only once)
+- Build PS sources
+```
+pulp build
+```
 
-```bash
-yarn generator
+- Run blockchain locally
+```
+truffle develop
+```
+
+- Serve app
+```
+yarn start
 ```

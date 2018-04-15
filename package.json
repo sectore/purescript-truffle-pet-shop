@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "./node_modules/.bin/bower cache clean && ./node_modules/.bin/bower install",
-    "start": "npm run clean && npm run cp-assets && parcel index.html",
+    "start": "npm run clean && npm run cp-assets && ./node_modules/.bin/parcel index.html --no-autoinstall --open",
     "cp-assets": "mkdir -p static && cp -R static dist",
     "clean": "rimraf dist",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -27,7 +27,10 @@
     "url": "https://github.com/sectore/purescript-truffle-pet-shop/issues"
   },
   "homepage": "https://github.com/sectore/purescript-truffle-pet-shop#readme",
-  "dependencies": {},
+  "dependencies": {
+    "bignumber.js": "^6.0.0",
+    "ethjs-provider-http": "^0.1.6"
+  },
   "devDependencies": {
     "bower": "^1.8.0",
     "crypto-js": "^3.1.9-1",
