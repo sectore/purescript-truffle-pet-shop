@@ -16,7 +16,7 @@ import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML (HTML, text) as HH
-import Halogen.HTML.Core (ClassName(..), PropName(..))
+import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Elements (br_, button, div, h3, img, span, strong_) as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -78,8 +78,7 @@ view p =
                   [ HP.alt "140x140"
                   , HP.class_ $ ClassName "img-rounded img-center"
                   , HP.src pet.picture
-                  , HP.prop (PropName "style") "width: 100%"
-                  -- , HP.src "https://animalso.com/wp-content/uploads/2017/01/Golden-Retriever_6.jpg"
+                  -- , HP.prop (PropName "style") "width: 100%"
                   ]
               , HH.br_
               , HH.br_

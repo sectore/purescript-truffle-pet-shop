@@ -22,11 +22,9 @@
   "dependencies": {
     "purescript-halogen": "^3.1.3",
     "purescript-affjax": "^5.0.0",
-    "purescript-foreign-generic": "^5.0.1",
+    "purescript-foreign-generic": "5.0.0",
     "purescript-console": "^3.0.0",
-    "purescript-web3-generator": "v0.18.0"
-  },
-  "resolutions": {
-    "purescript-foreign-generic": "v5.0.0"
+    "purescript-web3-generator": "v0.18.0",
+    "purescript-web3": "^0.18.1"
   }
 }

@@ -11,7 +11,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Halogen as H
 import Halogen.Aff (HalogenEffects) as HA
 import Halogen.Aff.Util (awaitBody, runHalogenAff, selectElement) as HA
-import Halogen.VDom.Driver (runUI)
+import Halogen.VDom.Driver (runUI) as HD
 import Network.HTTP.Affjax (AJAX)
 
 main :: Eff (HA.HalogenEffects (ajax :: AJAX)) Unit
@@ -20,7 +20,7 @@ main = HA.runHalogenAff do
   el <- HA.selectElement $ QuerySelector "#app"
   case el of
     Nothing ->
-      throwError $ error "#app has to be defined"
+      throwError $ error "div#app has to be defined"
     Just el' -> do
-      io <- runUI Pets.view unit (fromMaybe body el)
+      io <- HD.runUI Pets.view unit (fromMaybe body el)
       io.query $ H.action Pets.FetchPets

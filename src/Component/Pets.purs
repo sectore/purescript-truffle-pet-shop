@@ -88,7 +88,7 @@ view = H.parentComponent
   eval :: Query ~> H.ParentDSL State Query P.Query PetSlot Void (Fx e)
   eval (FetchPets next) = do
       H.modify (_ { loading = true })
-      r <- H.liftAff $ AX.get ("./pets.json")
+      r <- H.liftAff $ AX.get ("./json/pets.json")
       H.modify (_ { loading = false
                   , result = runExcept $ decodeJSON r.response
                   })
