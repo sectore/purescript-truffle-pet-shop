@@ -3,6 +3,7 @@ module Main where
 import Prelude
 
 import Component.Pets (Query(..), view) as Pets
+import Config (adaptionAddress)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Error.Class (throwError)
@@ -22,4 +23,4 @@ main = HA.runHalogenAff do
       throwError $ error "div#app has to be defined"
     Just el' -> do
       io <- HD.runUI Pets.view unit (fromMaybe body el)
-      io.query $ H.action Pets.FetchPets
+      io.query $ H.action $ Pets.Init adaptionAddress

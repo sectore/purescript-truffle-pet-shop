@@ -2,7 +2,7 @@
 -- | Adaption
 --------------------------------------------------------------------------------
 
-module Contracts.Adaption where
+module Contracts.Adoption where
 
 import Prelude
 
