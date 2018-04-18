@@ -10,3 +10,4 @@ yarn-error.log
 .cache
 src/Contracts/Adaption_bu.txt
 .env
+build/

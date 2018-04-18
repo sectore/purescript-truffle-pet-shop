@@ -7,30 +7,36 @@ module Component.Pets
 
 import Prelude
 
+import Component.Pet (Pet)
 import Component.Pet as P
 import Contracts.Adoption as Adoption
 import Control.Error.Util (hush)
 import Control.Monad.Aff (Aff, liftEff')
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Except (lift, runExcept)
-import Data.Either (Either(..))
+import Data.Array (index)
+import Data.Either (Either(Left, Right))
 import Data.Foreign (MultipleErrors)
 import Data.Foreign.Generic (decodeJSON)
+import Data.FunctorWithIndex (mapWithIndex)
 import Data.Lens ((.~))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(Just, Nothing), maybe)
+import Data.Newtype (unwrap, wrap)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Network.Ethereum.Web3 (Address, BlockNumber, ChainCursor(..), _to, defaultTransactionOptions, metamaskProvider, runWeb3)
+import Network.Ethereum.Web3 (Address, BlockNumber, ChainCursor(..), Vector, _to, defaultTransactionOptions, metamaskProvider, mkAddress, mkHexString, runWeb3)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
+import Network.Ethereum.Web3.Solidity (unVector)
+import Network.Ethereum.Web3.Solidity.Size (N16)
 import Network.HTTP.Affjax as AX
 import Types (Fx)
 
 type State =
   { loading :: Boolean
-  , result :: Either MultipleErrors Pets
+  , result :: Maybe Pets
   , blockNumber :: Maybe BlockNumber
   , accounts :: Maybe (Array Address)
   , contractAddress :: Maybe Address
@@ -60,7 +66,7 @@ view = H.parentComponent
   initialState :: State
   initialState =
     { loading: false
-    , result: Right []
+    , result: Nothing
     , blockNumber: Nothing
     , accounts: Nothing
     , contractAddress: Nothing
@@ -82,9 +88,9 @@ view = H.parentComponent
         , HH.p_ [ HH.text $ "Block no.: " <> maybe "unknown block" show st.blockNumber ]
         , HH.div_
             [ case st.result of
-                Left e ->
-                  HH.p_ [ HH.text $ show e ]
-                Right pets ->
+                Nothing ->
+                  HH.p_ [ HH.text "" ]
+                Just pets ->
                   HH.div
                   [ HP.class_ $ ClassName "row" ]
                   (map renderPet pets)
@@ -110,18 +116,48 @@ view = H.parentComponent
       -- get accounts
       acc <- lift $ hush <$> runWeb3 provider eth_getAccounts
       _ <- lift $ log $ "acc: " <> show acc
+      -- get gas price
       gp <- lift $ hush <$> runWeb3 provider eth_gasPrice
       _ <- lift $ log $ "gas price: " <> show gp
       currentState <- H.get
       let txOpts = defaultTransactionOptions # _to .~ currentState.contractAddress
-      ad <- lift $ runWeb3 provider $ do
+      -- get adopters
+      adopters <- lift $ runWeb3 provider $
         Adoption.getAdopters txOpts Latest
-      _ <- lift $ log $ "adopters " <> show ad
+      _ <- lift $ log $ "adopters " <> show adopters
       H.modify (_ { loading = false
-                  , result = runExcept $ decodeJSON r.response
                   , accounts = acc
                   , blockNumber = bn
                   })
+      let (response :: Either MultipleErrors Pets) = runExcept $ decodeJSON r.response
+      case response of
+          Right r -> do
+              case adopters of
+                Right a -> do
+                  cState <- H.get
+                  H.modify (_ { result = setAdopted cState.result (hush a) } )
+                Left _ ->
+                  lift $ log "error adopters"
+          Left _ ->
+              lift $ log "error response"
+
       pure next
   eval (HandlePetMessage p msg next) = do
     pure next
+
+-- Helper to update adopted status of a Pet comparing to contracts
+setAdopted :: Maybe Pets -> Maybe (Vector N16 Address) -> Maybe Pets
+setAdopted mPets mAddresses = do
+  pets <- mPets
+  addresses <- unVector <$> mAddresses
+  mEmptyContract <- mkAddress <$> mkHexString "0x0000000000000000000000000000000000000000"
+  case mEmptyContract of
+    Nothing -> Nothing
+    Just emptyContract ->
+      -- loop all pets to compare + update its adopted status
+      pure $ mapWithIndex
+        (\i (pet :: Pet) -> do
+          let mAddr = index addresses i
+          let isAdopted = maybe false ((/=) emptyContract) mAddr
+          wrap $ _{ adopted = isAdopted } $ unwrap pet)
+        pets

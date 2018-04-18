@@ -14,8 +14,9 @@ import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype)
 import Halogen as H
-import Halogen.HTML (HTML, text) as HH
+import Halogen.HTML (HTML, span_, text) as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Elements (br_, button, div, h3, img, span, strong_) as HH
 import Halogen.HTML.Events as HE
@@ -30,9 +31,11 @@ newtype Pet = Pet
   , age :: Int
   , breed :: String
   , location :: String
+  , adopted :: Boolean
   }
 
 derive instance genericPet :: Generic Pet _
+derive instance ntPet :: Newtype Pet _
 
 instance showPet :: Show Pet where
   show = genericShow
@@ -99,6 +102,10 @@ view p =
               , HH.span
                   [ HP.class_ $ ClassName "pet-location" ]
                   [ HH.text pet.location ]
+              , HH.br_
+              , HH.text "adopted: "
+              , HH.span_
+                  [ HH.text $ show pet.adopted ]
               , HH.br_
               , HH.br_
               , HH.button
