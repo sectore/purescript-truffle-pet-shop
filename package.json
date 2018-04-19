@@ -32,12 +32,12 @@
     "ethjs-provider-http": "^0.1.6"
   },
   "devDependencies": {
-    "bower": "^1.8.0",
+    "bower": "^1.8.4",
     "crypto-js": "^3.1.9-1",
-    "parcel-bundler": "^1.7.0",
+    "parcel-bundler": "^1.7.1",
     "purescript": "^0.11.7",
     "purescript-psa": "^0.6.0",
-    "rimraf": "^2.6.1",
+    "rimraf": "^2.6.2",
     "yargs": "^11.0.0"
   }
 }
