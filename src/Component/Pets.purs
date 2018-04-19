@@ -124,7 +124,6 @@ view = H.parentComponent
       -- get adopters
       adopters <- lift $ runWeb3 provider $
         Adoption.getAdopters txOpts Latest
-      _ <- lift $ log $ "adopters " <> show adopters
       H.modify (_ { loading = false
                   , accounts = acc
                   , blockNumber = bn
@@ -135,7 +134,10 @@ view = H.parentComponent
               case adopters of
                 Right a -> do
                   cState <- H.get
-                  H.modify (_ { result = setAdopted cState.result (hush a) } )
+                  let updatedAdopters = setAdopted (Just r) (hush a)
+                  lift $ log $ "a " <> show a
+                  lift $ log $ "updatedAdopters " <> show updatedAdopters
+                  H.modify (_ { result = updatedAdopters } )
                 Left _ ->
                   lift $ log "error adopters"
           Left _ ->

@@ -9,7 +9,8 @@
     "cp-assets": "mkdir -p static && cp -R static dist",
     "clean": "rimraf dist",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generator": "pulp build --src-path generator -m Generator --to generator.js && mkdir -p contracts/abis && node generator.js --abis contracts/abis --dest src --module Contracts && rm generator.js"
+    "generator": "pulp build --src-path pre-build -m Compile --to compile.js && node compile.js --log-level info && rm compile.js",
+    "deploy": "pulp build --src-path pre-build -m Deploy --to deploy.js && node deploy.js --log-level info && rm deploy.js"
   },
   "repository": {
     "type": "git",
@@ -29,7 +30,10 @@
   "homepage": "https://github.com/sectore/purescript-truffle-pet-shop#readme",
   "dependencies": {
     "bignumber.js": "^6.0.0",
-    "ethjs-provider-http": "^0.1.6"
+    "ethjs-provider-http": "^0.1.6",
+    "keccak": "^1.4.0",
+    "secp256k1": "^3.5.0",
+    "solc": "^0.4.22"
   },
   "devDependencies": {
     "bower": "^1.8.4",

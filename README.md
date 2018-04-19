@@ -4,35 +4,37 @@ _...work in progress..._
 
 [Truffle's Pet Shop tutorial](http://truffleframework.com/tutorials/pet-shop) ported to [`PureScript`](http://www.purescript.org/).
 
+However, instead of being lost in space with [`Truffle`](http://truffleframework.com/) it uses a _more functional truffle_ called [`chantrelle`](https://github.com/f-o-a-m/chanterelle).
+
 
 # Installation
 
 - Install dependencies (only once)
 
-```bash
+```
 yarn
 ```
 
-- Build PS sources
+# Run
+
+- Generate PureScript sources of contracts into folder `src/Contracts`
+```
+yarn generator
+```
+
+- Run [`cliquebait`](https://github.com/f-o-a-m/cliquebait) to have a running blockchain locally.
+```
+docker run --rm -it -p 8545:8545 foamspace/cliquebait:latest
+```
+
+- Deploy contract. With this step contract artifacts ([ABI](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI)) will be created in folder `build/contracts/`. Also the contract address will be stored into `.env` file, which will be injected into Pet Shop application while running it.
+```
+yarn deploy
+```
+
+- Build PureScript sources of Pet Shop application
 ```
 pulp build
-```
-
-- Migrate data
-```
-truffle migrate
-```
-
-- Check the output of `truffle migrate` and copy the address hash of the Adoption contract from it.
-At the output you will find that address by searching for `Adoption:`.
-Then create an empty `.env` file to projects root folder and add an `env` variable `ADOPTION_ADDRESS` to it containing the hash. For example:
-```
-ADOPTION_ADDRESS = "0x30753e4a8aad7f8597332e813735def5dd395028"
-```
-
-- Run blockchain locally
-```
-truffle develop
 ```
 
 - Serve app
