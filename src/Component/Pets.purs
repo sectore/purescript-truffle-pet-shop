@@ -27,10 +27,9 @@ import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Network.Ethereum.Web3 (Address, BlockNumber, ChainCursor(..), Vector, _to, defaultTransactionOptions, metamaskProvider, mkAddress, mkHexString, runWeb3)
+import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(..), D1, D6, DOne, Vector, _to, defaultTransactionOptions, metamaskProvider, mkAddress, mkHexString, runWeb3)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
 import Network.Ethereum.Web3.Solidity (unVector)
-import Network.Ethereum.Web3.Solidity.Size (N16)
 import Network.HTTP.Affjax as AX
 import Types (Fx)
 
@@ -148,7 +147,7 @@ view = H.parentComponent
     pure next
 
 -- Helper to update adopted status of a Pet comparing to contracts
-setAdopted :: Maybe Pets -> Maybe (Vector N16 Address) -> Maybe Pets
+setAdopted :: Maybe Pets -> Maybe (Vector (D1 :& DOne D6) Address) -> Maybe Pets
 setAdopted mPets mAddresses = do
   pets <- mPets
   addresses <- unVector <$> mAddresses

@@ -3,7 +3,6 @@
     "version": "0.0.1",
     "source-dir": "contracts",
     "modules": [ "Adoption"
-               , "Migrations"
                ],
     "dependencies": [],
     "solc-output-selection": [],
