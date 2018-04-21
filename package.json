@@ -33,7 +33,7 @@
     "ethjs-provider-http": "^0.1.6",
     "keccak": "^1.4.0",
     "secp256k1": "^3.5.0",
-    "solc": "^0.4.22"
+    "solc": "^0.4.23"
   },
   "devDependencies": {
     "bower": "^1.8.4",
