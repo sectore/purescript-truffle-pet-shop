@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "./node_modules/.bin/bower cache clean && ./node_modules/.bin/bower install",
-    "start": "npm run clean && npm run cp-assets && ./node_modules/.bin/parcel index.html --no-autoinstall --open",
+    "build": "pulp build",
+    "start": "npm run clean && npm run build && npm run cp-assets && ./node_modules/.bin/parcel index.html --no-autoinstall",
     "cp-assets": "mkdir -p static && cp -R static dist",
     "clean": "rimraf dist",
     "test": "echo \"Error: no test specified\" && exit 1",

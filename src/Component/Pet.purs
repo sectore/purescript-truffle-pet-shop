@@ -2,25 +2,29 @@ module Component.Pet
   ( Query(..)
   , Pet(..)
   , PetId
-  , Message
+  , Message (..)
   , view)
   where
 
 import Prelude
 
+import Control.Monad.Aff (Aff)
+import Control.Monad.Aff.Console (log)
 import Data.Bifunctor (bimap)
 import Data.Foreign.Class (class Decode, class Encode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, unwrap)
+import Halogen (lift)
 import Halogen as H
 import Halogen.HTML (HTML, span_, text) as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Elements (br_, button, div, h3, img, span, strong_) as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Types (Fx)
 
 type PetId = Int
 
@@ -50,9 +54,11 @@ data Query a
   = Adopt a
 
 data Message
-  = NotifyAdopt
+  = NotifyAdopt PetId
 
-view :: forall m. Pet -> H.Component HH.HTML Query Unit Message m
+type PetFx = Aff Fx
+
+view :: Pet -> H.Component HH.HTML Query Unit Message PetFx
 view p =
   H.component
     { initialState: const p
@@ -117,7 +123,9 @@ view p =
             ]
           ]
 
-  eval :: Query ~> H.ComponentDSL Pet Query Message m
+  eval :: Query ~> H.ComponentDSL Pet Query Message PetFx
   eval (Adopt next) = do
-    H.raise NotifyAdopt
+    pet <- H.get
+    _ <- lift <<< log $ "pet to adopt: " <> show pet
+    H.raise <<< NotifyAdopt <<< _.id $ unwrap pet
     pure next
