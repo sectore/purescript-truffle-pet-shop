@@ -22,12 +22,12 @@ yarn
 yarn generator
 ```
 
-- Make a copy of `cliquebait.template.json` and rename it to `cliquebait.json`. Open that file to replace `METAMASK_ACCOUNT_HASH` with the hash of your MetaMask account. With that the value of `"alloc"` will be similar like this:
+- Make a copy of `cliquebait.template.json` and rename it to `cliquebait.json`. Open that file to replace `METAMASK_ACCOUNT_ADDRESS` with the address of your MetaMask account. With that the value of `"alloc"` will be similar like this:
 
 ```
 "alloc": {
   "0x627306090abaB3A6e1400e9345bC60c78a8BEf57": {
-    "balance": "1111111111000000000000000000"
+    "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
   }
 }
 ```
