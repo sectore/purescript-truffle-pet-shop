@@ -62,3 +62,9 @@ yarn start
 ```
 yarn test
 ```
+
+# Acknowledge
+
+- [Truffle's Pet Shop tutorial](http://truffleframework.com/tutorials/pet-shop) written in `JS`
+- [purescript-web3-tests](https://github.com/f-o-a-m/purescript-web3-tests/) (`Chanterelle` and [purescript-web3](https://github.com/f-o-a-m/purescript-web3/) )
+- [parking-dao](https://github.com/f-o-a-m/parking-dao) (`Solidity` app using `Chanterelle`)
