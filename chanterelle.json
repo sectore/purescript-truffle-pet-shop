@@ -1,6 +1,7 @@
 {
     "name": "purescript-truffle-pet-shop",
     "version": "0.0.1",
+    "artifacts-dir": "build",
     "source-dir": "contracts",
     "modules": [ "Adoption"
                ],

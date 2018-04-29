@@ -28,7 +28,7 @@
     "purescript-web3": "^0.22.0"
   },
   "devDependencies": {
-    "purescript-chanterelle": "git+https://github.com/f-o-a-m/chanterelle#71b4c0c6245d5032629dd6337aee65c2308cca1a"
+    "purescript-chanterelle": "git+https://github.com/f-o-a-m/chanterelle#94a14f9ad266e56f1d46b8f6d2f721a4731a063d"
   },
   "resolutions": {
     "purescript-js-date": "^5.1.0"

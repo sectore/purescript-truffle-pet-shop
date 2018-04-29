@@ -22,7 +22,11 @@ import Node.Process (PROCESS)
 main :: forall e. Eff (console :: CONSOLE, eth :: ETH, fs :: FS, process :: PROCESS, exception :: EXCEPTION | e) Unit
 main = deployMain deployScript
 
-deployScript :: forall eff. DeployM eff Address
+type DeployResults =
+  ( adoptionAddr :: Address
+  )
+
+deployScript :: forall eff. DeployM eff (Record DeployResults)
 deployScript = do
   deployCfg@(DeployConfig {primaryAccount}) <- ask
   let txOpts = defaultTransactionOptions # _from ?~ primaryAccount
@@ -31,7 +35,7 @@ deployScript = do
   let adAddr = adoption.deployAddress
   _ <- liftAff $ log $ "adoption address " <> show adAddr
   writeAddresses adAddr
-  pure adAddr
+  pure { adoptionAddr: adAddr }
 
 writeAddresses
     :: forall eff m

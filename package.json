@@ -9,7 +9,7 @@
     "start": "npm run clean && npm run build && npm run cp-assets && ./node_modules/.bin/parcel index.html --no-autoinstall",
     "cp-assets": "mkdir -p static && cp -R static dist",
     "clean": "rimraf dist",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "pulp test --include ./pre-build",
     "generator": "pulp build --src-path pre-build -m Compile --to compile.js && node compile.js --log-level info && rm compile.js",
     "deploy": "pulp build --src-path pre-build -m Deploy --to deploy.js && node deploy.js --log-level info && rm deploy.js"
   },

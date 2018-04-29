@@ -53,3 +53,12 @@ yarn start
 ```
 
 - Open http://localhost:1234/
+
+# Tests
+
+1. Run [`cliquebait`](https://github.com/f-o-a-m/cliquebait) as described above
+
+2. Run tests
+```
+yarn test
+```

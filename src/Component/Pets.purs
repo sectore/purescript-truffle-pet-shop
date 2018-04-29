@@ -27,14 +27,13 @@ import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Network.Ethereum.Core.BigNumber (embed, hexadecimal, parseBigNumber)
-import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, EventAction(..), Vector, _from, _gas, _gasPrice, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber)
+import Network.Ethereum.Core.BigNumber (embed)
+import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, Vector, _from, _gas, _to, defaultTransactionOptions, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
 import Network.Ethereum.Web3.Solidity (unVector)
 import Network.Ethereum.Web3.Solidity.Sizes (s256)
 import Network.HTTP.Affjax as AX
 import Partial.Unsafe (unsafePartial)
-import Type.Proxy (Proxy(..))
 import Types (Fx)
 
 type State =
@@ -179,7 +178,7 @@ view = H.parentComponent
                                             # _from .~ Just account
                                             # _to .~ cState.contractAddress
                                             -- # _gas .~ parseBigNumber hexadecimal "0x2dc2dc"
-                                            -- # _gas ?~ embed 4712388
+                                            # _gas ?~ embed 4712388
                                             -- # _gasPrice ?~ embed 2147483647
                         lift $ log $ "txOpts " <> show txOpts
                         tx <- lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
