@@ -14,8 +14,8 @@ import Data.Bifunctor (bimap)
 import Data.Foreign.Class (class Decode, class Encode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Halogen (lift)
 import Halogen as H
@@ -44,6 +44,9 @@ derive instance ntPet :: Newtype Pet _
 instance showPet :: Show Pet where
   show = genericShow
 
+instance eqPet :: Eq Pet where
+  eq = genericEq
+
 instance decodePet :: Decode Pet where
   decode = genericDecode $ defaultOptions { unwrapSingleConstructors = true }
 
@@ -52,24 +55,25 @@ instance encodePet :: Encode Pet where
 
 data Query a
   = Adopt a
+  | HandleInput Pet a
 
 data Message
   = NotifyAdopt PetId
 
 type PetFx = Aff Fx
 
-view :: Pet -> H.Component HH.HTML Query Unit Message PetFx
-view p =
+view :: H.Component HH.HTML Query Pet Message PetFx
+view =
   H.component
-    { initialState: const p
+    { initialState: id
     , render
     , eval
-    , receiver: const Nothing
+    , receiver: HE.input HandleInput
     }
   where
 
   render :: Pet -> H.ComponentHTML Query
-  render (Pet pet) =
+  render p@(Pet pet) =
     bimap id id $
       HH.div
         [ HP.class_ $ ClassName "col-sm-6 col-md-4 col-lg-3" ]
@@ -97,6 +101,12 @@ view p =
                   [ HP.class_ $ ClassName "pet-breed" ]
                   [ HH.text pet.name ]
               , HH.br_
+              , HH.strong_ [ HH.text "id"]
+              , HH.text ": "
+              , HH.span
+                  [ HP.class_ $ ClassName "" ]
+                  [ HH.text $ show pet.id ]
+              , HH.br_
               , HH.strong_ [ HH.text "Age"]
               , HH.text ": "
               , HH.span
@@ -114,9 +124,15 @@ view p =
                   [ HH.text $ show pet.adopted ]
               , HH.br_
               , HH.br_
+              , HH.text "pet data: "
+              , HH.span_
+                  [ HH.text $ show p ]
+              , HH.br_
+              , HH.br_
               , HH.button
                   [ HP.class_ $ ClassName "btn btn-default btn-adopt"
                   , HE.onClick (HE.input_ Adopt)
+                  , HP.disabled $ pet.adopted
                   ]
                   [ HH.text "Adopt" ]
               ]
@@ -128,4 +144,9 @@ view p =
     pet <- H.get
     _ <- lift <<< log $ "pet to adopt: " <> show pet
     H.raise <<< NotifyAdopt <<< _.id $ unwrap pet
+    pure next
+
+  eval (HandleInput pet next) = do
+    current <- H.get
+    when (current /= pet) $ H.put pet
     pure next

@@ -7,7 +7,7 @@ module Component.Pets
 
 import Prelude
 
-import Component.Pet (Message(NotifyAdopt), Pet)
+import Component.Pet (Message(NotifyAdopt), Pet(..), PetId)
 import Component.Pet as P
 import Contracts.Adoption as Adoption
 import Control.Error.Util (hush)
@@ -19,21 +19,23 @@ import Data.Either (Either(Left, Right))
 import Data.Foreign (MultipleErrors)
 import Data.Foreign.Generic (decodeJSON)
 import Data.FunctorWithIndex (mapWithIndex)
-import Data.Lens ((.~), (?~))
+import Data.Lens ((.~))
 import Data.Maybe (Maybe(Just, Nothing), fromJust, maybe)
 import Data.Newtype (unwrap, wrap)
+import Halogen (liftAff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Network.Ethereum.Core.BigNumber (embed)
-import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, Vector, _from, _gas, _to, defaultTransactionOptions, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber)
+import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, EventAction(TerminateEvent), Vector, _from, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
 import Network.Ethereum.Web3.Solidity (unVector)
 import Network.Ethereum.Web3.Solidity.Sizes (s256)
 import Network.HTTP.Affjax as AX
 import Partial.Unsafe (unsafePartial)
+import Type.Proxy (Proxy(..))
 import Types (Fx)
 
 type State =
@@ -88,6 +90,7 @@ view = H.parentComponent
         , HH.p_ [ HH.text $ "Contract address: " <> maybe "unknown contract address" show st.contractAddress ]
         , HH.p_ [ HH.text $ "Accounts: " <> maybe "unknown accounts" show st.accounts ]
         , HH.p_ [ HH.text $ "Block no.: " <> maybe "unknown block no." show st.blockNumber ]
+        , HH.p_ [ HH.text $ "loading: " <> show st.loading ]
         , HH.div_
             [ case st.result of
                 Nothing ->
@@ -104,8 +107,8 @@ view = H.parentComponent
   renderPet p@(P.Pet pet) =
     HH.slot
       (PetSlot pet.id)
-      (P.view p)
-      unit
+      P.view
+      p
     (HE.input (HandlePetMessage pet.id))
 
   eval :: Query ~> H.ParentDSL State Query P.Query PetSlot Void PetsFx
@@ -140,7 +143,7 @@ view = H.parentComponent
           Right r -> do
               case adopters of
                 Right a -> do
-                  let updatedAdopters = setAdopted (Just r) (hush a)
+                  let updatedAdopters = setAdoptedByContract (Just r) (hush a)
                   lift $ log $ "adopters " <> show a
                   -- lift $ log $ "updatedAdopters " <> show updatedAdopters
                   H.modify (_ { result = updatedAdopters } )
@@ -154,6 +157,8 @@ view = H.parentComponent
   eval (HandlePetMessage p msg next) = do
     case msg of
       NotifyAdopt pId-> do
+        H.modify (_ { loading = true
+                    })
         provider <- lift $ liftEff' metamaskProvider
         -- get accounts
         accounts <- lift $ hush <$> runWeb3 provider eth_getAccounts
@@ -177,18 +182,22 @@ view = H.parentComponent
                         let txOpts = defaultTransactionOptions
                                             # _from .~ Just account
                                             # _to .~ cState.contractAddress
-                                            -- # _gas .~ parseBigNumber hexadecimal "0x2dc2dc"
-                                            # _gas ?~ embed 4712388
-                                            -- # _gasPrice ?~ embed 2147483647
                         lift $ log $ "txOpts " <> show txOpts
                         tx <- lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
-                        -- let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust cState.contractAddress
-                        -- _ <- liftAff $ runWeb3 provider $
-                        --                   event filterAdopted $ \e@(Adoption.Adopted cs) -> do
-                        --                     liftAff $ log $ "Received Adopted event: " <> show e
-                        --                     pure TerminateEvent
-                        -- lift $ log $ "send adopt tx " <> show tx
-                        lift $ log $ "adopt tx: " <> show tx
+                        lift $ log $ "send adopt tx " <> show tx
+                        let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust cState.contractAddress
+                        _ <- liftAff $ runWeb3 provider $
+                                          event filterAdopted $ \e@(Adoption.Adopted cs) -> do
+                                            liftAff $ log $ "Received Adopted event: " <> show e
+                                            -- TODO: Any way to subscribe this event and
+                                            pure TerminateEvent
+                        -- ^ After checking `filterAdopted` event we do know that an pet has been adopted.
+                        -- Anyway, it would be nice to subscribe `Adoption.Adopted` anyhow with `H.subscribe` if possible
+                        -- At the moment I don't know how to do that :)
+                        -- So let's update the state at the meantime here...
+                        H.modify (_ { result = setAdoptedById cState.result pId
+                                    , loading = false
+                                    })
                       Nothing -> do
                         lift $ log "error creating uIntNFromBigNumber..."
                   Nothing ->
@@ -199,8 +208,8 @@ view = H.parentComponent
     pure next
 
 -- Helper to update adopted status of a Pet comparing to contracts
-setAdopted :: Maybe Pets -> Maybe (Vector (D1 :& DOne D6) Address) -> Maybe Pets
-setAdopted mPets mAddresses = do
+setAdoptedByContract :: Maybe Pets -> Maybe (Vector (D1 :& DOne D6) Address) -> Maybe Pets
+setAdoptedByContract mPets mAddresses = do
   pets <- mPets
   addresses <- unVector <$> mAddresses
   mEmptyContract <- mkAddress <$> mkHexString "0x0000000000000000000000000000000000000000"
@@ -214,3 +223,12 @@ setAdopted mPets mAddresses = do
           let isAdopted = maybe false ((/=) emptyContract) mAddr
           wrap $ _{ adopted = isAdopted } $ unwrap pet)
         pets
+
+setAdoptedById :: Maybe Pets -> PetId -> Maybe Pets
+setAdoptedById mPets pId = do
+  map (setAdopted pId) <$> mPets
+  where
+    setAdopted pId' p@(Pet pet) =
+      if not pet.adopted then
+        Pet $ pet{ adopted = pet.id == pId' }
+      else p
