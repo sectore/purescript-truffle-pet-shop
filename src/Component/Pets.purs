@@ -7,6 +7,10 @@ module Component.Pets
 
 import Prelude
 
+import Bulma.Common (Is(Is1, Is3), runClassName, runClassNames) as B
+import Bulma.Elements.Title (title, isSize) as BTitle
+import Bulma.Columns.Columns (columns, isMultiline) as B
+import Bulma.Layout.Layout (container, isVerticalTile, tile) as B
 import Component.Pet (Message(NotifyAdopt), Pet(..), PetId)
 import Component.Pet as P
 import Contracts.Adoption as Adoption
@@ -79,11 +83,15 @@ view = H.parentComponent
   render :: State -> H.ParentHTML Query P.Query PetSlot PetsFx
   render st =
     HH.div
-      [ HP.class_ $ ClassName "row" ]
+      [ HP.class_ $ ClassName $ B.runClassNames [ B.container ] ]
       [ HH.div
-          [ HP.class_ $ ClassName "col-xs-12 col-sm-8 col-sm-push-2" ]
+          [ HP.class_ $ ClassName "" ]
           [ HH.h1
-            [ HP.class_ $ ClassName "text-center" ]
+            [ HP.class_ $ ClassName (B.runClassNames
+                        [ BTitle.title
+                        , BTitle.isSize B.Is1
+                        ]
+                      )]
             [ HH.text "Pet Shop" ]
         , HH.br_
         , HH.br_
@@ -97,7 +105,11 @@ view = H.parentComponent
                   HH.p_ [ HH.text "" ]
                 Just pets ->
                   HH.div
-                  [ HP.class_ $ ClassName "row" ]
+                  [ HP.class_ $ ClassName $ B.runClassNames
+                      [ B.columns
+                      , B.isMultiline
+                      ]
+                  ]
                   (map renderPet pets)
             ]
           ]
