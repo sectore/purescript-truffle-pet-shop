@@ -7,16 +7,17 @@ module Component.Pets
 
 import Prelude
 
-import Bulma.Common (Is(Is1, Is3), runClassName, runClassNames) as B
-import Bulma.Elements.Title (title, isSize) as BTitle
 import Bulma.Columns.Columns (columns, isMultiline) as B
-import Bulma.Layout.Layout (container, isVerticalTile, tile) as B
+import Bulma.Common (Is(Is1), runClassNames) as B
+import Bulma.Elements.Title (title, isSize) as BTitle
+import Bulma.Layout.Layout (container) as B
 import Component.Pet (Message(NotifyAdopt), Pet(..), PetId)
 import Component.Pet as P
 import Contracts.Adoption as Adoption
 import Control.Error.Util (hush)
-import Control.Monad.Aff (Aff, liftEff')
+import Control.Monad.Aff (Aff, killFiber, launchAff, launchAff_, liftEff')
 import Control.Monad.Aff.Console (log)
+import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (lift, runExcept)
 import Data.Array (head, index)
 import Data.Either (Either(Left, Right))
@@ -26,14 +27,15 @@ import Data.FunctorWithIndex (mapWithIndex)
 import Data.Lens ((.~))
 import Data.Maybe (Maybe(Just, Nothing), fromJust, maybe)
 import Data.Newtype (unwrap, wrap)
-import Halogen (liftAff)
+import Halogen (liftAff, liftEff)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Network.Ethereum.Core.BigNumber (embed)
-import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, EventAction(TerminateEvent), Vector, _from, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber)
+import Halogen.Query.EventSource as ES
+import Network.Ethereum.Core.BigNumber (embed, unsafeToInt)
+import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, EventAction(ContinueEvent), Vector, _from, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
 import Network.Ethereum.Web3.Solidity (unVector)
 import Network.Ethereum.Web3.Solidity.Sizes (s256)
@@ -59,6 +61,7 @@ derive instance ordPetSlot :: Ord PetSlot
 data Query a
   = Init Address a
   | HandlePetMessage P.PetId P.Message a
+  | Adopted Adoption.Adopted a
 
 type PetsFx = Aff Fx
 
@@ -163,6 +166,18 @@ view = H.parentComponent
                   lift $ log "error adopters"
           Left _ ->
               lift $ log "error response"
+      state <- H.get
+      -- subscribe to `Adopted` event
+      H.subscribe $ ES.eventSource' (\emit -> do
+        let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust state.contractAddress
+        fiber <- launchAff $ runWeb3 provider $ event filterAdopted $ 
+                    \event -> do
+                      liftAff $ log $ "Received Adopted event: " <> show event
+                      liftEff $ emit event
+                      pure ContinueEvent
+        pure $ launchAff_ $ killFiber (error "cleanup") fiber
+        )
+        (Just <<< flip Adopted ES.Listening)
 
       pure next
 
@@ -197,27 +212,23 @@ view = H.parentComponent
                         lift $ log $ "txOpts " <> show txOpts
                         tx <- lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
                         lift $ log $ "send adopt tx " <> show tx
-                        let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust cState.contractAddress
-                        _ <- liftAff $ runWeb3 provider $
-                                          event filterAdopted $ \e@(Adoption.Adopted cs) -> do
-                                            liftAff $ log $ "Received Adopted event: " <> show e
-                                            -- TODO: Any way to subscribe this event and
-                                            pure TerminateEvent
-                        -- ^ After checking `filterAdopted` event we do know that an pet has been adopted.
-                        -- Anyway, it would be nice to subscribe `Adoption.Adopted` anyhow with `H.subscribe` if possible
-                        -- At the moment I don't know how to do that :)
-                        -- So let's update the state at the meantime here...
-                        H.modify (_ { result = setAdoptedById cState.result pId
-                                    , loading = false
-                                    })
                       Nothing -> do
                         lift $ log "error creating uIntNFromBigNumber..."
                   Nothing ->
                     lift $ log "error no first account"
               Nothing ->
                 lift $ log $ "no accounts "
+        H.modify (_ { loading = false } )
         lift $ log $ "handle NotifyAdopt "
     pure next
+  eval (Adopted (Adoption.Adopted event) next) = do 
+    {result} <- H.get
+    let petId = unsafeToInt $ unUIntN $ event.petId
+    H.modify (_ { result = setAdoptedById result petId
+              , loading = false
+              })
+    _ <- lift $ log $ "Adopted: " <> show petId
+    pure next 
 
 -- Helper to update adopted status of a Pet comparing to contracts
 setAdoptedByContract :: Maybe Pets -> Maybe (Vector (D1 :& DOne D6) Address) -> Maybe Pets
