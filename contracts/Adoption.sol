@@ -1,24 +1,26 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
+
 
 contract Adoption {
 
-  address[16] public adopters;
+    address[16] public adopters;
 
-  event Adopted(uint petId);
+    event Adopted(uint petId);
 
-  // Adopting a pet
-  function adopt(uint petId) public returns (uint) {
-    require(petId >= 0 && petId <= 15);
+    // Adopting a pet
+    function adopt(uint petId) public returns (uint) {
+        require(petId >= 0 && petId <= 15);
 
-    adopters[petId] = msg.sender;
-    emit Adopted(petId);
+        adopters[petId] = msg.sender;
 
-    return petId;
-  }
+        emit Adopted(petId);
 
-  // Retrieving the adopters
-  function getAdopters() public view returns (address[16]) {
-    return adopters;
-  }
+        return petId;
+    }
+
+    // Retrieving the adopters
+    function getAdopters() public view returns (address[16]) {
+        return adopters;
+    }
 
 }
