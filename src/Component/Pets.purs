@@ -16,7 +16,7 @@ import Component.Pet as P
 import Contracts.Adoption as Adoption
 import Control.Error.Util (hush)
 import Control.Monad.Aff (Aff, killFiber, launchAff, launchAff_, liftEff')
-import Control.Monad.Aff.Console (log)
+import Control.Monad.Aff.Console (log, error) as C
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (lift, runExcept)
 import Data.Array (head, index)
@@ -137,10 +137,10 @@ view = H.parentComponent
       bn <- lift $ hush <$> runWeb3 provider eth_blockNumber
       -- get accounts
       acc <- lift $ hush <$> runWeb3 provider eth_getAccounts
-      _ <- lift $ log $ "accounts: " <> show acc
+      _ <- lift $ C.log $ "accounts: " <> show acc
       -- get gas price
       gp <- lift $ hush <$> runWeb3 provider eth_gasPrice
-      _ <- lift $ log $ "gas price: " <> show gp
+      _ <- lift $ C.log $ "gas price: " <> show gp
       currentState <- H.get
       let txOpts = defaultTransactionOptions
                       # _to .~ currentState.contractAddress
@@ -148,7 +148,7 @@ view = H.parentComponent
       adopters <- lift $ runWeb3 provider $
         Adoption.getAdopters txOpts Latest
       adopters' <- lift $ runWeb3 provider $ Adoption.adopters txOpts Latest (unsafePartial $ fromJust $ uIntNFromBigNumber s256 $ embed 15)
-      _ <- lift $ log $ "adopters' " <> show adopters'
+      _ <- lift $ C.log $ "adopters' " <> show adopters'
       H.modify (_ { loading = false
                   , accounts = acc
                   , blockNumber = bn
@@ -159,20 +159,20 @@ view = H.parentComponent
               case adopters of
                 Right a -> do
                   let updatedAdopters = setAdoptedByContract (Just r) (hush a)
-                  lift $ log $ "adopters " <> show a
-                  -- lift $ log $ "updatedAdopters " <> show updatedAdopters
+                  lift $ C.log $ "adopters " <> show a
+                  -- lift $ C.log $ "updatedAdopters " <> show updatedAdopters
                   H.modify (_ { result = updatedAdopters } )
                 Left _ ->
-                  lift $ log "error adopters"
+                  lift $ C.log "error adopters"
           Left _ ->
-              lift $ log "error response"
+              lift $ C.log "error response"
       state <- H.get
       -- subscribe to `Adopted` event
       H.subscribe $ ES.eventSource' (\emit -> do
         let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust state.contractAddress
         fiber <- launchAff $ runWeb3 provider $ event filterAdopted $ 
                     \event -> do
-                      liftAff $ log $ "Received Adopted event: " <> show event
+                      liftAff $ C.log $ "Received Adopted event: " <> show event
                       liftEff $ emit event
                       pure ContinueEvent
         pure $ launchAff_ $ killFiber (error "cleanup") fiber
@@ -191,35 +191,40 @@ view = H.parentComponent
         accounts <- lift $ hush <$> runWeb3 provider eth_getAccounts
         _ <- case accounts of
               Just accs -> do
-                lift $ log $ "accounts " <> show accounts
+                lift $ C.log $ "accounts " <> show accounts
                 let mAccount = head accs
-                -- lift $ log $ "account " <> mAccount
+                -- lift $ C.log $ "account " <> mAccount
                 case mAccount of
                   Just account -> do
                     -- uIntNFromBigNumber :: forall n . KnownSize n => DLProxy n -> BigNumber -> Maybe (UIntN n)
-                    lift $ log $ "pId " <> show pId
+                    lift $ C.log $ "pId " <> show pId
                     let bPetId = embed pId
                     let mUPetId = uIntNFromBigNumber s256 bPetId
                     case mUPetId of
                       Just uPetId -> do
                         cState <- H.get
-                        lift $ log $ "from " <> show account
-                        lift $ log $ "to " <> show cState.contractAddress
-                        lift $ log $ "uIntNFromBigNumber " <> show uPetId
+                        lift $ C.log $ "from " <> show account
+                        lift $ C.log $ "to " <> show cState.contractAddress
+                        lift $ C.log $ "uIntNFromBigNumber " <> show uPetId
                         let txOpts = defaultTransactionOptions
                                             # _from .~ Just account
                                             # _to .~ cState.contractAddress
-                        lift $ log $ "txOpts " <> show txOpts
+                        lift $ C.log $ "txOpts " <> show txOpts
                         tx <- lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
-                        lift $ log $ "send adopt tx " <> show tx
+                        case tx of
+                          Right tx' -> 
+                            lift $ C.log $ "Sending adopt tx succeeded: " <> show tx'
+                          Left err -> do 
+                            lift $ C.error $ "Sending adopt tx failed: " <> show err 
+                            H.modify (_ { loading = false } )
+
                       Nothing -> do
-                        lift $ log "error creating uIntNFromBigNumber..."
+                        lift $ C.log "error creating uIntNFromBigNumber..."
                   Nothing ->
-                    lift $ log "error no first account"
+                    lift $ C.log "error no first account"
               Nothing ->
-                lift $ log $ "no accounts "
-        H.modify (_ { loading = false } )
-        lift $ log $ "handle NotifyAdopt "
+                lift $ C.log $ "no accounts "
+        lift $ C.log $ "handle NotifyAdopt "
     pure next
   eval (Adopted (Adoption.Adopted event) next) = do 
     {result} <- H.get
@@ -227,7 +232,7 @@ view = H.parentComponent
     H.modify (_ { result = setAdoptedById result petId
               , loading = false
               })
-    _ <- lift $ log $ "Adopted: " <> show petId
+    _ <- lift $ C.log $ "Adopted: " <> show petId
     pure next 
 
 -- Helper to update adopted status of a Pet comparing to contracts
