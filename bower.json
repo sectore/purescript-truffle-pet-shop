@@ -10,7 +10,6 @@
     "PureScript"
   ],
   "moduleType": [],
-  "homepage": "",
   "private": true,
   "ignore": [
     "**/.*",
@@ -23,12 +22,12 @@
     "purescript-bulma": "git+https://github.com/sectore/purescript-bulma#8509f041155d4a4b959939748ccaefac5c91d4de",
     "purescript-halogen": "^3.1.3",
     "purescript-affjax": "^5.0.0",
-    "purescript-foreign-generic": "^5.0.0",
+    "purescript-foreign-generic": "^6.0.0",
     "purescript-console": "^3.0.0",
-    "purescript-web3-generator": "^0.21.2",
-    "purescript-web3": "^0.22.1"
+    "purescript-web3-generator": "^0.22.0",
+    "purescript-web3": "^0.23.2"
   },
   "devDependencies": {
-    "purescript-chanterelle": "git+https://github.com/f-o-a-m/chanterelle#91a2b383edcd198c46842a073e50f5a1869672f4"
+    "purescript-chanterelle": "git+https://github.com/f-o-a-m/chanterelle#0.9.1"
   }
 }
