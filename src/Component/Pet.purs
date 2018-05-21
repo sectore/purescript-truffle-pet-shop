@@ -8,13 +8,13 @@ module Component.Pet
 
 import Prelude
 
-import Bulma.Common (Breakpoint(..), Color(Primary), Is(..), runClassName, runClassNames) as B
+import Bulma.Common (Breakpoint(..), Color(Primary), runClassName, runClassNames) as B
 import Bulma.Components.Card (card, cardContent, cardImage) as B
 import Bulma.Elements.Button (Color(..), button, isColor) as BB
 import Bulma.Elements.Elements (content) as B
 import Bulma.Elements.Image (isRatio, Ratio(..)) as B
 import Bulma.Columns.Columns (column) as B
-import Bulma.Columns.Size (PercentSize(..), isPercentSize, isPercentSizeResponsive, isSize) as B
+import Bulma.Columns.Size (PercentSize(OneThird, Half), isPercentSizeResponsive) as B
 import Bulma.Elements.Title (title) as B
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log)
