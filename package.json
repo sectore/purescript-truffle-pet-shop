@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/sectore/purescript-truffle-pet-shop#readme",
   "dependencies": {
-    "bignumber.js": "^7.1.0",
+    "bignumber.js": "^7.2.1",
     "bulma": "0.6.1"
   },
   "devDependencies": {

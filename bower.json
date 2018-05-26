@@ -24,11 +24,11 @@
     "purescript-affjax": "^5.0.0",
     "purescript-foreign-generic": "^6.0.0",
     "purescript-console": "^3.0.0",
-    "purescript-web3-generator": "^0.22.0",
-    "purescript-web3": "^0.23.2"
+    "purescript-web3-generator": "^0.23.0",
+    "purescript-web3": "^0.24.0"
   },
   "devDependencies": {
-    "purescript-chanterelle": "git+https://github.com/f-o-a-m/chanterelle#0.9.1",
+    "purescript-chanterelle": "git+https://github.com/f-o-a-m/chanterelle#0.10.0",
     "purescript-spec": "^2.0.0"
   }
 }
