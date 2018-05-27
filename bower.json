@@ -19,7 +19,7 @@
     "tests"
   ],
   "dependencies": {
-    "purescript-bulma": "git+https://github.com/sectore/purescript-bulma#8509f041155d4a4b959939748ccaefac5c91d4de",
+    "purescript-bulma": "git+https://github.com/sectore/purescript-bulma#e2a21e5c9524952f26a4a5ba107ea39f72db299d",
     "purescript-halogen": "^3.1.3",
     "purescript-affjax": "^5.0.0",
     "purescript-foreign-generic": "^6.0.0",

@@ -4,3 +4,19 @@
 
 // import bulma from node-modules folder at least
 @import "./node_modules/bulma/bulma";
+
+
+.button-adopt {
+    width: 100%;
+    margin-top: 20px;;
+}
+
+.card-image {
+    position: relative;
+}
+
+.tag-adopted {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}

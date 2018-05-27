@@ -9,8 +9,10 @@ import Prelude
 
 import Bulma.Columns.Columns (columns, isMultiline) as B
 import Bulma.Common (Is(Is1), runClassNames) as B
-import Bulma.Elements.Title (title, isSize) as BTitle
-import Bulma.Layout.Layout (container) as B
+import Bulma.Elements.Elements (content) as B
+import Bulma.Elements.Title (isSize, subtitle, title) as BTitle
+import Bulma.Layout.Layout (HeroColor(..), container, footer, hero, heroBody, isHeroColor, section) as B
+import Bulma.Modifiers.Typography (Alignment(..), hasAlignment) as BT
 import Component.Pet (Message(NotifyAdopt), Pet(..), PetId)
 import Component.Pet as P
 import Contracts.Adoption as Adoption
@@ -19,7 +21,7 @@ import Control.Monad.Aff (Aff, killFiber, launchAff, launchAff_, liftEff')
 import Control.Monad.Aff.Console (log, error) as C
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (lift, runExcept)
-import Data.Array (head, index)
+import Data.Array (head, index, length)
 import Data.Either (Either(Left, Right))
 import Data.Foreign (MultipleErrors)
 import Data.Foreign.Generic (decodeJSON)
@@ -34,6 +36,7 @@ import Halogen.HTML.Core (ClassName(..))
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Query.EventSource as ES
+import HalogenUtil as HU
 import Network.Ethereum.Core.BigNumber (embed, unsafeToInt)
 import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, EventAction(ContinueEvent), Vector, _from, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
@@ -86,36 +89,90 @@ view = H.parentComponent
   render :: State -> H.ParentHTML Query P.Query PetSlot PetsFx
   render st =
     HH.div
-      [ HP.class_ $ ClassName $ B.runClassNames [ B.container ] ]
-      [ HH.div
-          [ HP.class_ $ ClassName "" ]
-          [ HH.h1
-            [ HP.class_ $ ClassName (B.runClassNames
+      [ HU.className B.container ]
+      [ -- 
+        -- #header
+        --
+        HH.section
+          [ HU.classNames [ B.hero, B.isHeroColor B.Dark ] 
+          ]
+          [ HH.div 
+              [ HU.className B.heroBody ]
+              [ HH.div 
+                [ HU.className B.container ]
+                [ HH.h1
+                    [ HU.classNames 
                         [ BTitle.title
                         , BTitle.isSize B.Is1
                         ]
-                      )]
-            [ HH.text "Pet Shop" ]
-        , HH.br_
-        , HH.br_
-        , HH.p_ [ HH.text $ "Contract address: " <> maybe "unknown contract address" show st.contractAddress ]
-        , HH.p_ [ HH.text $ "Accounts: " <> maybe "unknown accounts" show st.accounts ]
-        , HH.p_ [ HH.text $ "Block no.: " <> maybe "unknown block no." show st.blockNumber ]
-        , HH.p_ [ HH.text $ "loading: " <> show st.loading ]
-        , HH.div_
-            [ case st.result of
-                Nothing ->
-                  HH.p_ [ HH.text "" ]
-                Just pets ->
-                  HH.div
-                  [ HP.class_ $ ClassName $ B.runClassNames
-                      [ B.columns
-                      , B.isMultiline
-                      ]
-                  ]
-                  (map renderPet pets)
-            ]
+                    ]
+                    [ HH.text "Pet Shop" ]
+                , HH.h2
+                    [ HU.className BTitle.subtitle
+                    ]
+                    -- TODO: Show no of adopted dogs
+                    [ HH.text $ "0 of " <> labelNoDogs st.result <> " pets have been adopted" 
+                    ]
+
+                ]
+              ]
           ]
+          
+        -- , HH.br_
+        -- , HH.br_
+        -- , HH.p_ [ HH.text $ "Contract address: " <> maybe "unknown contract address" show st.contractAddress ]
+        -- , HH.p_ [ HH.text $ "Accounts: " <> maybe "unknown accounts" show st.accounts ]
+        -- , HH.p_ [ HH.text $ "Block no.: " <> maybe "unknown block no." show st.blockNumber ]
+        -- , HH.p_ [ HH.text $ "loading: " <> show st.loading ]
+        -- 
+        -- #pets
+        --
+      , HH.section 
+          [ HU.className B.section ] 
+          [ HH.div 
+              [ HU.classNames 
+                  [ B.columns
+                  , B.isMultiline
+                  ] 
+              ]
+              [ case st.result of
+                  Nothing ->
+                    HH.p_ [ HH.text "" ]
+                  Just pets ->
+                    HH.div
+                    [ HP.class_ $ ClassName $ B.runClassNames
+                        [ B.columns
+                        , B.isMultiline
+                        ]
+                    ]
+                    (map renderPet pets)
+              ]
+          ]
+        -- 
+        -- #footer
+        --
+        , HH.footer 
+            [ HU.className B.footer ]
+            [ HH.div 
+              [ HU.className B.container ]
+              [ HH.div 
+                  [ HU.classNames [B.content, BT.hasAlignment BT.Centered ]
+                  ]
+                  [ HH.p_ 
+                    [ HH.text "Inspired by " ]
+                  , HH.a
+                      [ HP.href "http://truffleframework.com/tutorials/pet-shop"
+                      ]
+                      [ HH.text "Truffle's Pet Shop tutorial" ]
+                  , HH.br_
+                  , HH.text "All sources code available at "
+                  , HH.a
+                      [ HP.href "https://github.com/sectore/purescript-truffle-pet-shop"
+                      ]
+                      [ HH.text "GitHub" ]                  
+                  ]
+              ]
+            ]
       ]
 
   renderPet :: P.Pet -> H.ParentHTML Query P.Query PetSlot PetsFx
@@ -260,3 +317,7 @@ setAdoptedById mPets pId = do
       if not pet.adopted then
         Pet $ pet{ adopted = pet.id == pId' }
       else p
+
+labelNoDogs :: Maybe Pets -> String
+labelNoDogs =
+  maybe "--" (show <<< length)

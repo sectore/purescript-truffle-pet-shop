@@ -8,14 +8,17 @@ module Component.Pet
 
 import Prelude
 
-import Bulma.Common (Breakpoint(..), Color(Primary), runClassName, runClassNames) as B
-import Bulma.Components.Card (card, cardContent, cardImage) as B
-import Bulma.Elements.Button (Color(..), button, isColor) as BB
-import Bulma.Elements.Elements (content) as B
-import Bulma.Elements.Image (isRatio, Ratio(..)) as B
 import Bulma.Columns.Columns (column) as B
-import Bulma.Columns.Size (PercentSize(OneThird, Half), isPercentSizeResponsive) as B
+import Bulma.Columns.Size (PercentSize(..), isPercentSizeResponsive) as B
+import Bulma.Common (Breakpoint(Desktop, Tablet), Color(..), Size(..), unsafeClassName) as B
+import Bulma.Components.Card (card, cardContent, cardImage) as B
+import Bulma.Elements.Button (Color(..), Style(..), button, isColor, isStyle) as BB
+import Bulma.Elements.Image (Ratio(..), image, isRatio) as B
+import Bulma.Elements.Tag (tag) as B
 import Bulma.Elements.Title (title) as B
+import Bulma.Modifiers.Helpers (Helpers(..), is) as B
+import Bulma.Modifiers.Modifiers (isSize, isColor) as B
+import Bulma.Modifiers.Typography (Size(..), isSize) as BT
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log)
 import Data.Bifunctor (bimap)
@@ -24,14 +27,15 @@ import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
+import Data.Monoid (mempty)
 import Data.Newtype (class Newtype, unwrap)
 import Halogen (lift)
 import Halogen as H
-import Halogen.HTML (HTML, span_, text) as HH
-import Halogen.HTML.Core (ClassName(..))
-import Halogen.HTML.Elements (br_, button, div, h3, img, span, strong_) as HH
+import Halogen.HTML (HTML, br_, figure, li_, text, ul_) as HH
+import Halogen.HTML.Elements (button, div, h3, img, strong_) as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import HalogenUtil as HU
 import Types (Fx)
 
 type PetId = Int
@@ -84,82 +88,87 @@ view =
   render p@(Pet pet) =
     bimap id id $
       HH.div
-        [ HP.class_ $ ClassName $ B.runClassNames
+        [ HU.classNames
           [ B.column
-          , B.isPercentSizeResponsive B.Half B.Tablet
-          , B.isPercentSizeResponsive B.OneThird B.Desktop
+          , B.isPercentSizeResponsive B.OneThird B.Tablet
+          , B.isPercentSizeResponsive B.OneQuarter B.Desktop
           ]
+        , HP.id_ $ show pet.id
         ]
         [ HH.div
-            [ HP.class_ $ ClassName $ B.runClassNames [ B.card ] ]
-            [ HH.img
-                [ HP.alt "140x140"
-                , HP.class_ $ ClassName $ B.runClassNames
-                    [ B.cardImage
-                    , B.isRatio B.Square
+            [ HU.className B.card ]
+            [ HH.div 
+                [ HU.className B.cardImage ]
+                [ HH.figure
+                    [ HU.classNames [ B.image, B.isRatio B.OneByOne ]
                     ]
-                , HP.src pet.picture
+                    [ HH.img
+                    [ HP.src pet.picture 
+                    ]
+                  ]
+                , HH.h3 
+                    [ HU.classNames $
+                        [ B.tag
+                        , B.isColor B.Primary
+                        , BT.isSize BT.Size6
+                        , B.unsafeClassName "tag-adopted"
+                        ]
+                        <> if not pet.adopted 
+                          then [B.is B.Invisible]
+                          else mempty
+                    ]
+                    [ HH.text "✓"]
                 ]
             , HH.div
-              [ HP.class_ $ ClassName $ B.runClassName B.cardContent ]
+              [ HU.className B.cardContent ]
               [ HH.div
-                [ HP.class_ $ ClassName $ B.runClassName B.content ]
+                [ HU.className B.cardContent ]
                 [ HH.h3
-                    [ HP.class_ $ ClassName $ B.runClassName B.title ]
+                    [ HU.className B.title ]
                     [ HH.text pet.name ]
-                , HH.div
-                  [ HP.class_ $ ClassName "panel-body" ]
-                  [ HH.br_
-                  , HH.br_
-                  , HH.strong_ [ HH.text "Breed"]
-                  , HH.text ": "
-                  , HH.span
-                      [ HP.class_ $ ClassName "pet-breed" ]
-                      [ HH.text pet.name ]
-                  , HH.br_
-                  , HH.strong_ [ HH.text "id"]
-                  , HH.text ": "
-                  , HH.span
-                      [ HP.class_ $ ClassName "" ]
-                      [ HH.text $ show pet.id ]
-                  , HH.br_
-                  , HH.strong_ [ HH.text "Age"]
-                  , HH.text ": "
-                  , HH.span
-                      [ HP.class_ $ ClassName "pet-age" ]
-                      [ HH.text $ show pet.age ]
-                  , HH.br_
-                  , HH.strong_ [ HH.text "Location"]
-                  , HH.text ": "
-                  , HH.span
-                      [ HP.class_ $ ClassName "pet-location" ]
-                      [ HH.text pet.location ]
-                  , HH.br_
-                  , HH.text "adopted: "
-                  , HH.span_
-                      [ HH.text $ show pet.adopted ]
-                  , HH.br_
-                  , HH.br_
-                  , HH.text "pet data: "
-                  , HH.span_
-                      [ HH.text $ show p ]
-                  , HH.br_
-                  , HH.br_
-                  , HH.button
-                      [ HP.class_ $ ClassName $ B.runClassNames $
-                          [ BB.button
-                          , BB.isColor (BB.CommonColor B.Primary)
-                          ]
-                      , HE.onClick (HE.input_ Adopt)
-                      , HP.disabled $ pet.adopted
-                      ]
-                      [ HH.text "Adopt" ]
-                  ]
+                , HH.ul_
+                    [ HH.li_
+                        [ HH.strong_
+                            [ HH.text "Breed "]
+                        , HH.text pet.name
+                        ]
+                    , HH.li_
+                        [ HH.strong_
+                            [ HH.text "Age "]
+                        , HH.text $ show pet.age
+                        ]
+                    , HH.li_
+                        [ HH.strong_
+                            [ HH.text "Location"]
+                        , HH.br_
+                        , HH.text pet.location
+                        ]
+                    ]
+                , HH.button
+                    [ HU.classNames
+                        [ BB.button
+                        , B.isSize B.Large
+                        , BB.isColor (BB.CommonColor B.Primary)
+                        , B.unsafeClassName "button-adopt"
+                        , BB.isStyle $ 
+                            if pet.adopted 
+                            then BB.Inverted
+                            else BB.Outlined
+                        -- TODO: Add loading state while requesting
+                        ]
+                    , HE.onClick (HE.input_ Adopt)
+                    , HP.disabled $ pet.adopted
+                    ]
+                    [ HH.text $ 
+                        if pet.adopted 
+                          then "Adopted"
+                          else "Adopt" 
+                    ]
                 ]
-
               ]
+
             ]
-          ]
+        ]
 
   eval :: Query ~> H.ComponentDSL Pet Query Message PetFx
   eval (Adopt next) = do
