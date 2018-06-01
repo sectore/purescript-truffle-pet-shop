@@ -12,7 +12,7 @@ import Bulma.Columns.Columns (column) as B
 import Bulma.Columns.Size (PercentSize(..), isPercentSizeResponsive) as B
 import Bulma.Common (Breakpoint(Desktop, Tablet), Color(..), Size(..), unsafeClassName) as B
 import Bulma.Components.Card (card, cardContent, cardImage) as B
-import Bulma.Elements.Button (Color(..), Style(..), button, isColor, isStyle) as BB
+import Bulma.Elements.Button (Color(..), State(..), Style(..), button, isColor, isState, isStyle) as BB
 import Bulma.Elements.Image (Ratio(..), image, isRatio) as B
 import Bulma.Elements.Tag (tag) as B
 import Bulma.Elements.Title (title) as B
@@ -22,8 +22,9 @@ import Bulma.Modifiers.Typography (Size(..), isSize) as BT
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (log)
 import Data.Bifunctor (bimap)
-import Data.Foreign.Class (class Decode, class Encode)
-import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
+import Data.Foreign (readInt, readString)
+import Data.Foreign.Class (class Decode)
+import Data.Foreign.Index ((!))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
@@ -48,6 +49,7 @@ newtype Pet = Pet
   , breed :: String
   , location :: String
   , adopted :: Boolean
+  , loading :: Boolean
   }
 
 derive instance genericPet :: Generic Pet _
@@ -60,10 +62,23 @@ instance eqPet :: Eq Pet where
   eq = genericEq
 
 instance decodePet :: Decode Pet where
-  decode = genericDecode $ defaultOptions { unwrapSingleConstructors = true }
-
-instance encodePet :: Encode Pet where
-  encode = genericEncode $ defaultOptions { unwrapSingleConstructors = true }
+  decode value = do 
+    id <- value ! "id" >>= readInt
+    name <- value ! "name" >>= readString
+    picture <- value ! "picture" >>= readString
+    age <- value ! "age" >>= readInt
+    breed <- value ! "breed" >>= readString
+    location <- value ! "location" >>= readString
+    pure $ Pet 
+      { id
+      , name
+      , picture 
+      , age 
+      , breed 
+      , location 
+      , adopted: false 
+      , loading: false 
+      }
 
 data Query a
   = Adopt a
@@ -152,9 +167,12 @@ view =
                         , B.unsafeClassName "button-adopt"
                         , BB.isStyle $ 
                             if pet.adopted 
-                            then BB.Inverted
-                            else BB.Outlined
-                        -- TODO: Add loading state while requesting
+                              then BB.Inverted
+                              else BB.Outlined
+                        , BB.isState $ 
+                            if pet.loading
+                              then BB.Loading
+                              else BB.Normal
                         ]
                     , HE.onClick (HE.input_ Adopt)
                     , HP.disabled $ pet.adopted

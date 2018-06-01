@@ -19,7 +19,7 @@ import Contracts.Adoption as Adoption
 import Control.Error.Util (hush)
 import Control.Monad.Aff (Aff, killFiber, launchAff, launchAff_, liftEff')
 import Control.Monad.Aff.Console (log, error) as C
-import Control.Monad.Eff.Exception (error)
+import Control.Monad.Eff.Exception (error, throw)
 import Control.Monad.Except (lift, runExcept)
 import Data.Array (head, index, length)
 import Data.Either (Either(Left, Right))
@@ -28,7 +28,7 @@ import Data.Foreign.Generic (decodeJSON)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Lens ((.~))
 import Data.Maybe (Maybe(Just, Nothing), fromJust, maybe)
-import Data.Newtype (unwrap, wrap)
+import Data.Newtype (over, unwrap, wrap)
 import Halogen (liftAff, liftEff)
 import Halogen as H
 import Halogen.HTML as HH
@@ -38,10 +38,10 @@ import Halogen.HTML.Properties as HP
 import Halogen.Query.EventSource as ES
 import HalogenUtil as HU
 import Network.Ethereum.Core.BigNumber (embed, unsafeToInt)
-import Network.Ethereum.Web3 (type (:&), Address, BlockNumber, ChainCursor(Latest), D1, D6, DOne, EventAction(ContinueEvent), Vector, _from, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
+import Network.Ethereum.Web3 (Address, BlockNumber, ChainCursor(Latest), EventAction(ContinueEvent), Vector, _from, _to, defaultTransactionOptions, event, eventFilter, metamaskProvider, mkAddress, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3.Api (eth_blockNumber, eth_gasPrice, eth_getAccounts)
 import Network.Ethereum.Web3.Solidity (unVector)
-import Network.Ethereum.Web3.Solidity.Sizes (s256)
+import Network.Ethereum.Web3.Solidity.Sizes (S16, s256)
 import Network.HTTP.Affjax as AX
 import Partial.Unsafe (unsafePartial)
 import Type.Proxy (Proxy(..))
@@ -155,21 +155,22 @@ view = H.parentComponent
             [ HU.className B.footer ]
             [ HH.div 
               [ HU.className B.container ]
-              [ HH.div 
-                  [ HU.classNames [B.content, BT.hasAlignment BT.Centered ]
+              [ HH.p 
+                  [ HU.classNames [ B.content, BT.hasAlignment BT.Centered ]
                   ]
-                  [ HH.p_ 
-                    [ HH.text "Inspired by " ]
+                  [ HH.text "Inspired by "
                   , HH.a
                       [ HP.href "http://truffleframework.com/tutorials/pet-shop"
                       ]
                       [ HH.text "Truffle's Pet Shop tutorial" ]
+                  , HH.text "."
                   , HH.br_
-                  , HH.text "All sources code available at "
+                  , HH.text "All sources available at "
                   , HH.a
                       [ HP.href "https://github.com/sectore/purescript-truffle-pet-shop"
                       ]
-                      [ HH.text "GitHub" ]                  
+                      [ HH.text "GitHub" ] 
+                  , HH.text "."
                   ]
               ]
             ]
@@ -202,8 +203,7 @@ view = H.parentComponent
       let txOpts = defaultTransactionOptions
                       # _to .~ currentState.contractAddress
       -- get adopters
-      adopters <- lift $ runWeb3 provider $
-        Adoption.getAdopters txOpts Latest
+      adopters <- lift $ runWeb3 provider $ Adoption.getAdopters txOpts Latest
       adopters' <- lift $ runWeb3 provider $ Adoption.adopters txOpts Latest (unsafePartial $ fromJust $ uIntNFromBigNumber s256 $ embed 15)
       _ <- lift $ C.log $ "adopters' " <> show adopters'
       H.modify (_ { loading = false
@@ -221,18 +221,18 @@ view = H.parentComponent
                   H.modify (_ { result = updatedAdopters } )
                 Left _ ->
                   lift $ C.log "error adopters"
-          Left _ ->
-              lift $ C.log "error response"
+          Left e ->
+              liftEff $ throw $ show e
       state <- H.get
       -- subscribe to `Adopted` event
       H.subscribe $ ES.eventSource' (\emit -> do
-        let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust state.contractAddress
-        fiber <- launchAff $ runWeb3 provider $ event filterAdopted $ 
-                    \event -> do
-                      liftAff $ C.log $ "Received Adopted event: " <> show event
-                      liftEff $ emit event
-                      pure ContinueEvent
-        pure $ launchAff_ $ killFiber (error "cleanup") fiber
+          let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) $ unsafePartial $ fromJust state.contractAddress
+          fiber <- launchAff $ runWeb3 provider $ event filterAdopted $ 
+                      \event -> do
+                        liftAff $ C.log $ "Received Adopted event: " <> show event
+                        liftEff $ emit event
+                        pure ContinueEvent
+          pure $ launchAff_ $ killFiber (error "cleanup") fiber
         )
         (Just <<< flip Adopted ES.Listening)
 
@@ -249,6 +249,7 @@ view = H.parentComponent
         _ <- case accounts of
               Just accs -> do
                 lift $ C.log $ "accounts " <> show accounts
+                {result} <- H.get
                 let mAccount = head accs
                 -- lift $ C.log $ "account " <> mAccount
                 case mAccount of
@@ -267,13 +268,17 @@ view = H.parentComponent
                                             # _from .~ Just account
                                             # _to .~ cState.contractAddress
                         lift $ C.log $ "txOpts " <> show txOpts
+                        H.modify (_ { result = setLoadedById result pId true
+                                    })
                         tx <- lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
                         case tx of
                           Right tx' -> 
                             lift $ C.log $ "Sending adopt tx succeeded: " <> show tx'
                           Left err -> do 
                             lift $ C.error $ "Sending adopt tx failed: " <> show err 
-                            H.modify (_ { loading = false } )
+                            H.modify (_ { loading = false 
+                                        , result = setLoadedById result pId true
+                                        })
 
                       Nothing -> do
                         lift $ C.log "error creating uIntNFromBigNumber..."
@@ -283,17 +288,17 @@ view = H.parentComponent
                 lift $ C.log $ "no accounts "
         lift $ C.log $ "handle NotifyAdopt "
     pure next
-  eval (Adopted (Adoption.Adopted event) next) = do 
+  eval (Adopted (Adoption.Adopted {petId}) next) = do 
     {result} <- H.get
-    let petId = unsafeToInt $ unUIntN $ event.petId
-    H.modify (_ { result = setAdoptedById result petId
-              , loading = false
-              })
-    _ <- lift $ C.log $ "Adopted: " <> show petId
+    let petId' = unsafeToInt $ unUIntN petId
+    H.modify (_ { result = setAdoptedById result petId'
+                , loading = false
+                })
+    _ <- lift $ C.log $ "Adopted: " <> show petId'
     pure next 
 
 -- Helper to update adopted status of a Pet comparing to contracts
-setAdoptedByContract :: Maybe Pets -> Maybe (Vector (D1 :& DOne D6) Address) -> Maybe Pets
+setAdoptedByContract :: Maybe Pets -> Maybe (Vector S16 Address) -> Maybe Pets
 setAdoptedByContract mPets mAddresses = do
   pets <- mPets
   addresses <- unVector <$> mAddresses
@@ -311,12 +316,21 @@ setAdoptedByContract mPets mAddresses = do
 
 setAdoptedById :: Maybe Pets -> PetId -> Maybe Pets
 setAdoptedById mPets pId = do
-  map (setAdopted pId) <$> mPets
+  map setAdopted <$> mPets
   where
-    setAdopted pId' p@(Pet pet) =
-      if not pet.adopted then
-        Pet $ pet{ adopted = pet.id == pId' }
-      else p
+    setAdopted pet@(Pet{id, adopted}) =
+      if not adopted then
+        over Pet (_{ adopted = id == pId, loading = false }) pet
+      else pet
+
+setLoadedById :: Maybe Pets -> PetId -> Boolean -> Maybe Pets
+setLoadedById mPets pId loading = do
+  map setLoading <$> mPets
+  where
+    setLoading pet@(Pet{id}) =
+      if id == pId then
+        over Pet (_{ loading = loading }) pet
+      else pet
 
 labelNoDogs :: Maybe Pets -> String
 labelNoDogs =

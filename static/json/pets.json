@@ -5,8 +5,7 @@
     "picture": "images/scottish-terrier.jpeg",
     "age": 3,
     "breed": "Scottish Terrier",
-    "location": "Lisco, Alabama",
-    "adopted": false
+    "location": "Lisco, Alabama"
   },
   {
     "id": 1,
@@ -14,8 +13,7 @@
     "picture": "images/scottish-terrier.jpeg",
     "age": 3,
     "breed": "Scottish Terrier",
-    "location": "Tooleville, West Virginia",
-    "adopted": false
+    "location": "Tooleville, West Virginia"
   },
   {
     "id": 2,
@@ -23,8 +21,7 @@
     "picture": "images/french-bulldog.jpeg",
     "age": 2,
     "breed": "French Bulldog",
-    "location": "Freeburn, Idaho",
-    "adopted": false
+    "location": "Freeburn, Idaho"
   },
   {
     "id": 3,
@@ -32,8 +29,7 @@
     "picture": "images/boxer.jpeg",
     "age": 2,
     "breed": "Boxer",
-    "location": "Camas, Pennsylvania",
-    "adopted": false
+    "location": "Camas, Pennsylvania"
   },
   {
     "id": 4,
@@ -41,8 +37,7 @@
     "picture": "images/french-bulldog.jpeg",
     "age": 2,
     "breed": "French Bulldog",
-    "location": "Gerber, South Dakota",
-    "adopted": false
+    "location": "Gerber, South Dakota"
   },
   {
     "id": 5,
@@ -50,8 +45,7 @@
     "picture": "images/french-bulldog.jpeg",
     "age": 3,
     "breed": "French Bulldog",
-    "location": "Innsbrook, Illinois",
-    "adopted": false
+    "location": "Innsbrook, Illinois"
   },
   {
     "id": 6,
@@ -59,8 +53,7 @@
     "picture": "images/golden-retriever.jpeg",
     "age": 3,
     "breed": "Golden Retriever",
-    "location": "Soudan, Louisiana",
-    "adopted": false
+    "location": "Soudan, Louisiana"
   },
   {
     "id": 7,
@@ -68,8 +61,7 @@
     "picture": "images/golden-retriever.jpeg",
     "age": 3,
     "breed": "Golden Retriever",
-    "location": "Jacksonwald, Palau",
-    "adopted": false
+    "location": "Jacksonwald, Palau"
   },
   {
     "id": 8,
@@ -77,8 +69,7 @@
     "picture": "images/french-bulldog.jpeg",
     "age": 2,
     "breed": "French Bulldog",
-    "location": "Honolulu, Hawaii",
-    "adopted": false
+    "location": "Honolulu, Hawaii"
   },
   {
     "id": 9,
@@ -86,8 +77,7 @@
     "picture": "images/boxer.jpeg",
     "age": 3,
     "breed": "Boxer",
-    "location": "Matheny, Utah",
-    "adopted": false
+    "location": "Matheny, Utah"
   },
   {
     "id": 10,
@@ -95,8 +85,7 @@
     "picture": "images/boxer.jpeg",
     "age": 2,
     "breed": "Boxer",
-    "location": "Tyhee, Indiana",
-    "adopted": false
+    "location": "Tyhee, Indiana"
   },
   {
     "id": 11,
@@ -104,8 +93,7 @@
     "picture": "images/scottish-terrier.jpeg",
     "age": 3,
     "breed": "Scottish Terrier",
-    "location": "Windsor, Montana",
-    "adopted": false
+    "location": "Windsor, Montana"
   },
   {
     "id": 12,
@@ -113,8 +101,7 @@
     "picture": "images/french-bulldog.jpeg",
     "age": 3,
     "breed": "French Bulldog",
-    "location": "Kingstowne, Nevada",
-    "adopted": false
+    "location": "Kingstowne, Nevada"
   },
   {
     "id": 13,
@@ -122,8 +109,7 @@
     "picture": "images/golden-retriever.jpeg",
     "age": 4,
     "breed": "Golden Retriever",
-    "location": "Sultana, Massachusetts",
-    "adopted": false
+    "location": "Sultana, Massachusetts"
   },
   {
     "id": 14,
@@ -131,8 +117,7 @@
     "picture": "images/golden-retriever.jpeg",
     "age": 2,
     "breed": "Golden Retriever",
-    "location": "Broadlands, Oregon",
-    "adopted": false
+    "location": "Broadlands, Oregon"
   },
   {
     "id": 15,
@@ -140,7 +125,6 @@
     "picture": "images/golden-retriever.jpeg",
     "age": 2,
     "breed": "Golden Retriever",
-    "location": "Dawn, Wisconsin",
-    "adopted": false
+    "location": "Dawn, Wisconsin"
   }
 ]
