@@ -12,6 +12,7 @@ import Component.PetList as PL
 import Contract.Adoption as Adoption
 import Control.Error.Util (hush)
 import Control.Monad.Aff (Aff, error, killFiber, launchAff, launchAff_)
+import Control.Monad.Eff.Exception (try)
 import Control.Monad.Except (runExcept)
 import Control.Monad.State (class MonadState)
 import Data.Array (head, index)
@@ -112,7 +113,7 @@ view = H.parentComponent
       , maybeNotificationView mInfos N.Success
       , Header.view
       , case pets of
-          Nothing -> HH.text "loading pets"
+          Nothing -> HH.text ""
           Just (Left err) -> emptyView
           Just (Right pets') ->
             HH.slot'
@@ -130,49 +131,52 @@ view = H.parentComponent
     let (response :: Either MultipleErrors Pets) = runExcept $ decodeJSON result.response
     case response of
       Right petsFromJSON -> do
-        -- provider
-        provider <- H.lift $ H.liftEff metamaskProvider
+        provider <- H.liftEff $ try metamaskProvider
+        case provider of
+          Right provider' -> do
+            mPrimaryAccount <- H.liftAff $ maybe Nothing (head) <<< hush <$> runWeb3 provider' eth_getAccounts
+            when (isNothing mPrimaryAccount) $ do
+                errMsg <- updateErrorMsgFromState "Primary account not found. Make sure that you have logged in into MetaMask."
+                H.modify (_ { mErrors = errMsg
+                            })
+            H.modify (_ { primaryAccount = mPrimaryAccount, contractAddress = Just contractAddress } )
 
-        mPrimaryAccount <- H.liftAff $ maybe Nothing (head) <<< hush <$> runWeb3 provider eth_getAccounts
-        when (isNothing mPrimaryAccount) $ do
-            errMsg <- updateErrorMsgFromState "Primary account not found. Make sure that you have logged in into MetaMask."
-            H.modify (_ { mErrors = errMsg
-                        })
-        H.modify (_ { primaryAccount = mPrimaryAccount, contractAddress = Just contractAddress } )
+            let txOpts = defaultTransactionOptions
+                        # _to ?~ contractAddress
+            -- adopters
+            adopters <- H.liftAff $ runWeb3 provider' $ Adoption.getAdopters txOpts Latest
+            case adopters of
+              -- Result
+              Right (Right adopters') -> do
+                let pets' = setAdoptedByContract petsFromJSON adopters'
+                H.modify (_ { pets = Just $ Right pets' } )
+                -- subscribe `Adopted` event
+                H.subscribe $ ES.eventSource' (\emit -> do
+                    let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) contractAddress
+                    fiber <- launchAff $ runWeb3 provider' $ event filterAdopted $
+                                \event -> do
+                                  -- liftAff $ C.log $ "Received Adopted event: " <> show event
+                                  liftEff $ emit event
+                                  pure ContinueEvent
+                    pure $ launchAff_ $ killFiber (error "cleanup") fiber
+                  )
+                  (Just <<< flip Adopted ES.Listening)
 
-        let txOpts = defaultTransactionOptions
-                    # _to ?~ contractAddress
-        -- adopters
-        adopters <- H.liftAff $ runWeb3 provider $ Adoption.getAdopters txOpts Latest
-        case adopters of
-          -- Result
-          Right (Right adopters') -> do
-            let pets' = setAdoptedByContract petsFromJSON adopters'
-            H.modify (_ { pets = Just $ Right pets' } )
-            -- subscribe `Adopted` event
-            H.subscribe $ ES.eventSource' (\emit -> do
-                let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) contractAddress
-                fiber <- launchAff $ runWeb3 provider $ event filterAdopted $
-                            \event -> do
-                              -- liftAff $ C.log $ "Received Adopted event: " <> show event
-                              liftEff $ emit event
-                              pure ContinueEvent
-                pure $ launchAff_ $ killFiber (error "cleanup") fiber
-              )
-              (Just <<< flip Adopted ES.Listening)
-
-          -- CallError
-          Right (Left callError) -> do
-            errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have all smart contracts deployed before."
-            H.modify (_ { mErrors = errMsg
-                        , pets = Just $ Left $ PetsCallError callError
-                        })
-          -- Web3Error
-          Left web3Error -> do
-            errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have Metamask enabled and you are logged in."
-            H.modify (_ { mErrors = errMsg
-                        , pets = Just $ Left $ PetsWeb3Error web3Error
-                        })
+              -- CallError
+              Right (Left callError) -> do
+                errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have all smart contracts deployed before."
+                H.modify (_ { mErrors = errMsg
+                            , pets = Just $ Left $ PetsCallError callError
+                            })
+              -- Web3Error
+              Left web3Error -> do
+                errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have Metamask enabled and you are logged in."
+                H.modify (_ { mErrors = errMsg
+                            , pets = Just $ Left $ PetsWeb3Error web3Error
+                            })
+          Left error -> do
+            errMsg <- updateErrorMsgFromState "No Metamask provider found. Get Metamask at https://metamask.io/"
+            H.modify (_ { mErrors = errMsg })
       -- MultipleErrors
       Left foreignErrors -> do
         errMsg <- updateErrorMsgFromState "Parsing of `pets.json` failed"
@@ -185,7 +189,8 @@ view = H.parentComponent
     case pets of
       Just (Right pets') -> do
         let petId' = unsafeToInt $ unUIntN petId
-        H.modify _ { pets = Just $ Right $ setAdoptedById petId' pets' }
+        H.modify _ { pets = Just $ Right $ setLoadedById petId' false $ setAdoptedById petId' pets'
+                   }
       _ ->
         pure unit
     pure next
@@ -204,16 +209,15 @@ view = H.parentComponent
                         # _from .~ primaryAccount
                         # _to .~ contractAddress
             tx <- H.lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
-            -- Unset prevoius loading state
-            H.modify _ { pets = Just $ Right $ setLoadedById petId false pets' }
             case tx of
               Right tx' ->
-                H.modify (_ { mInfos = Just ["Sending adopt tx succeeded: " <> show tx']
-                            }
-                          )
+                H.modify _ { mInfos = Just ["Sending adopt tx succeeded: " <> show tx']
+                           }
               Left err -> do
                 errMsg <- updateErrorMsgFromState $ "Sending adopt tx failed: " <> show err
-                H.modify (_ { mErrors = errMsg })
+                H.modify _ { mErrors = errMsg
+                           , pets = Just $ Right $ setLoadedById petId false pets'
+                           }
           _ ->
             pure unit
 
