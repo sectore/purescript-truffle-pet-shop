@@ -39,13 +39,13 @@
     "crypto-js": "^3.1.9-1",
     "ethjs-provider-http": "^0.1.6",
     "keccak": "^1.4.0",
-    "node-sass": "^4.9.0",
-    "parcel-bundler": "^1.8.1",
-    "purescript": "^0.11.7",
-    "purescript-psa": "^0.6.0",
+    "node-sass": "^4.9.2",
+    "parcel-bundler": "^1.9.7",
+    "purescript": "0.11.7",
+    "purescript-psa": "0.6.0",
     "rimraf": "^2.6.2",
     "secp256k1": "^3.5.0",
     "solc": "^0.4.24",
-    "yargs": "^11.0.0"
+    "yargs": "^12.0.1"
   }
 }

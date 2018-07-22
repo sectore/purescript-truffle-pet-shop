@@ -6,7 +6,7 @@ module Test.AdoptionSpec
 import Prelude
 
 import Chanterelle.Test (TestConfig)
-import Contracts.Adoption as Adoption
+import Contract.Adoption as Adoption
 import Control.Monad.Aff.AVar (AVAR, makeEmptyVar, putVar, takeVar)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Eff.Class (liftEff)

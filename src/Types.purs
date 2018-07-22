@@ -1,5 +1,6 @@
 module Types where
 
+
 import Control.Monad.Aff.Console (CONSOLE)
 import Control.Monad.Eff.AVar (AVAR)
 import Control.Monad.Eff.Exception (EXCEPTION)

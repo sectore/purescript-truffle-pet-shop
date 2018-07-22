@@ -6,7 +6,16 @@ $footer-background-color: #e6e6e6;
 // import bulma from node-modules folder at least
 @import "./node_modules/bulma/bulma";
 
+.hero {
+  a {
+    text-decoration: underline;
+    font-weight: bold;
+  }
+}
 
+.notification {
+  margin-bottom: 0 !important; // overridden
+}
 .button-adopt {
     width: 100%;
     margin-top: 20px;;
@@ -20,4 +29,15 @@ $footer-background-color: #e6e6e6;
     position: absolute;
     right: 10px;
     top: 10px;
+    font-weight: bold;
+}
+
+.notification-adoption-error {
+    padding: 2rem;
+}
+
+.notification > .delete {
+    // fix position of icon delete, which might be fixed with bulma 0.7.x
+    right: 0.5rem;
+    top: 0.5rem;
 }

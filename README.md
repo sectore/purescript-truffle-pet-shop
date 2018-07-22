@@ -23,7 +23,7 @@ yarn generator
 
 - Use [`cliquebait`](https://github.com/f-o-a-m/cliquebait) to have a running blockchain locally. Replace `METAMASK_ACCOUNT_ADDRESS` with the address of a MetaMask development account you want to use. _Note:_ You might run following command as `sudo`.
 ```bash
-docker run --rm -it -p 8545:8545 -v `pwd`/cliquebait.json:/cliquebait/cliquebait.json -e ACCOUNTS_TO_CREATE=3 -e EXTERNAL_ALLOCS=METAMASK_ACCOUNT_ADDRESS foamspace/cliquebait:latest
+docker run --rm -it -p 8545:8545 -v `pwd`/cliquebait.json:/cliquebait/cliquebait.json -e ACCOUNTS_TO_CREATE=3 -e EXTERNAL_ALLOCS=METAMASK_ACCOUNT_ADDRESS ALLOC_WEI=0xC08DE6FCB28B80000 foamspace/cliquebait:v1.8.11
 ```
 
 - Deploy contract. With this step contract artifacts ([ABI](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI)) will be created in folder `build/contracts/`. Also the contract address will be stored into `.env` file, which will be injected into Pet Shop application while running it.

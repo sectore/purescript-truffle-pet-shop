@@ -9,6 +9,6 @@
     "solc-output-selection": [],
     "purescript-generator": {
         "output-path": "src",
-        "module-prefix": "Contracts"
+        "module-prefix": "Contract"
     }
 }

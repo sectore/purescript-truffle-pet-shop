@@ -20,8 +20,6 @@ import Bulma.Modifiers.Helpers (Helpers(..), is) as B
 import Bulma.Modifiers.Modifiers (isSize, isColor) as B
 import Bulma.Modifiers.Typography (Size(..), isSize) as BT
 import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (log)
-import Data.Bifunctor (bimap)
 import Data.Foreign (readInt, readString)
 import Data.Foreign.Class (class Decode)
 import Data.Foreign.Index ((!))
@@ -29,8 +27,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Monoid (mempty)
-import Data.Newtype (class Newtype, unwrap)
-import Halogen (lift)
+import Data.Newtype (class Newtype)
 import Halogen as H
 import Halogen.HTML (HTML, br_, figure, li_, text, ul_) as HH
 import Halogen.HTML.Elements (button, div, h3, img, strong_) as HH
@@ -52,6 +49,9 @@ newtype Pet = Pet
   , loading :: Boolean
   }
 
+type Input = Pet
+type State = Pet
+
 derive instance genericPet :: Generic Pet _
 derive instance ntPet :: Newtype Pet _
 
@@ -62,22 +62,22 @@ instance eqPet :: Eq Pet where
   eq = genericEq
 
 instance decodePet :: Decode Pet where
-  decode value = do 
+  decode value = do
     id <- value ! "id" >>= readInt
     name <- value ! "name" >>= readString
     picture <- value ! "picture" >>= readString
     age <- value ! "age" >>= readInt
     breed <- value ! "breed" >>= readString
     location <- value ! "location" >>= readString
-    pure $ Pet 
+    pure $ Pet
       { id
       , name
-      , picture 
-      , age 
-      , breed 
-      , location 
-      , adopted: false 
-      , loading: false 
+      , picture
+      , age
+      , breed
+      , location
+      , adopted: false
+      , loading: false
       }
 
 data Query a
@@ -85,11 +85,11 @@ data Query a
   | HandleInput Pet a
 
 data Message
-  = NotifyAdopt PetId
+  = NotifyAdopt
 
 type PetFx = Aff Fx
 
-view :: H.Component HH.HTML Query Pet Message PetFx
+view :: H.Component HH.HTML Query Input Message PetFx
 view =
   H.component
     { initialState: id
@@ -99,102 +99,98 @@ view =
     }
   where
 
-  render :: Pet -> H.ComponentHTML Query
+  render :: State -> H.ComponentHTML Query
   render p@(Pet pet) =
-    bimap id id $
-      HH.div
-        [ HU.classNames
-          [ B.column
-          , B.isPercentSizeResponsive B.OneThird B.Tablet
-          , B.isPercentSizeResponsive B.OneQuarter B.Desktop
-          ]
-        , HP.id_ $ show pet.id
+    HH.div
+      [ HU.classNames
+        [ B.column
+        , B.isPercentSizeResponsive B.OneThird B.Tablet
+        , B.isPercentSizeResponsive B.OneQuarter B.Desktop
         ]
-        [ HH.div
-            [ HU.className B.card ]
-            [ HH.div 
-                [ HU.className B.cardImage ]
-                [ HH.figure
-                    [ HU.classNames [ B.image, B.isRatio B.OneByOne ]
-                    ]
-                    [ HH.img
-                    [ HP.src pet.picture 
-                    ]
+      , HP.id_ $ show pet.id
+      ]
+      [ HH.div
+          [ HU.className B.card ]
+          [ HH.div
+              [ HU.className B.cardImage ]
+              [ HH.figure
+                  [ HU.classNames [ B.image, B.isRatio B.OneByOne ]
                   ]
-                , HH.h3 
-                    [ HU.classNames $
-                        [ B.tag
-                        , B.isColor B.Primary
-                        , BT.isSize BT.Size6
-                        , B.unsafeClassName "tag-adopted"
-                        ]
-                        <> if not pet.adopted 
-                          then [B.is B.Invisible]
-                          else mempty
-                    ]
-                    [ HH.text "✓"]
+                  [ HH.img
+                  [ HP.src pet.picture
+                  ]
                 ]
-            , HH.div
-              [ HU.className B.cardContent ]
-              [ HH.div
-                [ HU.className B.cardContent ]
-                [ HH.h3
-                    [ HU.className B.title ]
-                    [ HH.text pet.name ]
-                , HH.ul_
-                    [ HH.li_
-                        [ HH.strong_
-                            [ HH.text "Breed "]
-                        , HH.text pet.name
-                        ]
-                    , HH.li_
-                        [ HH.strong_
-                            [ HH.text "Age "]
-                        , HH.text $ show pet.age
-                        ]
-                    , HH.li_
-                        [ HH.strong_
-                            [ HH.text "Location"]
-                        , HH.br_
-                        , HH.text pet.location
-                        ]
-                    ]
-                , HH.button
-                    [ HU.classNames
-                        [ BB.button
-                        , B.isSize B.Large
-                        , BB.isColor (BB.CommonColor B.Primary)
-                        , B.unsafeClassName "button-adopt"
-                        , BB.isStyle $ 
-                            if pet.adopted 
-                              then BB.Inverted
-                              else BB.Outlined
-                        , BB.isState $ 
-                            if pet.loading
-                              then BB.Loading
-                              else BB.Normal
-                        ]
-                    , HE.onClick (HE.input_ Adopt)
-                    , HP.disabled $ pet.adopted
-                    ]
-                    [ HH.text $ 
-                        if pet.adopted 
-                          then "Adopted"
-                          else "Adopt" 
-                    ]
-                ]
+              , HH.h3
+                  [ HU.classNames $
+                      [ B.tag
+                      , B.isColor B.Primary
+                      , BT.isSize BT.Size6
+                      , B.unsafeClassName "tag-adopted"
+                      ]
+                      <> if not pet.adopted
+                        then [B.is B.Invisible]
+                        else mempty
+                  ]
+                  [ HH.text "✓"]
               ]
-
+          , HH.div
+            [ HU.className B.cardContent ]
+            [ HH.div
+              [ HU.className B.cardContent ]
+              [ HH.h3
+                  [ HU.className B.title ]
+                  [ HH.text pet.name ]
+              , HH.ul_
+                  [ HH.li_
+                      [ HH.strong_
+                          [ HH.text "Breed "]
+                      , HH.text pet.name
+                      ]
+                  , HH.li_
+                      [ HH.strong_
+                          [ HH.text "Age "]
+                      , HH.text $ show pet.age
+                      ]
+                  , HH.li_
+                      [ HH.strong_
+                          [ HH.text "Location"]
+                      , HH.br_
+                      , HH.text pet.location
+                      ]
+                  ]
+              , HH.button
+                  [ HU.classNames
+                      [ BB.button
+                      , B.isSize B.Large
+                      , BB.isColor (BB.CommonColor B.Primary)
+                      , B.unsafeClassName "button-adopt"
+                      , BB.isStyle $
+                          if pet.adopted
+                            then BB.Inverted
+                            else BB.Outlined
+                      , BB.isState $
+                          if pet.loading
+                            then BB.Loading
+                            else BB.Normal
+                      ]
+                  , HE.onClick (HE.input_ Adopt)
+                  , HP.disabled $ pet.adopted
+                  ]
+                  [ HH.text $
+                      if pet.adopted
+                        then "Adopted"
+                        else "Adopt"
+                  ]
+              ]
             ]
-        ]
 
-  eval :: Query ~> H.ComponentDSL Pet Query Message PetFx
+          ]
+      ]
+
+  eval :: Query ~> H.ComponentDSL State Query Message PetFx
   eval (Adopt next) = do
-    pet <- H.get
-    _ <- lift <<< log $ "pet to adopt: " <> show pet
-    H.raise <<< NotifyAdopt <<< _.id $ unwrap pet
+    H.raise $ NotifyAdopt
     pure next
-
   eval (HandleInput pet next) = do
     current <- H.get
     when (current /= pet) $ H.put pet
