@@ -1,10 +1,8 @@
-_...work in progress..._
-
 # purescript-truffle-pet-shop
 
-[Truffle's Pet Shop tutorial](http://truffleframework.com/tutorials/pet-shop) ported to [`PureScript`](http://www.purescript.org/).
+[Ethereum](https://ethereum.org/) based smart contract example by using [Cliquebait](https://github.com/f-o-a-m/cliquebait), [Chanterelle](https://github.com/f-o-a-m/chanterelle), [purescript-web3](https://github.com/f-o-a-m/purescript-web3) and other funny things. It's heavily inspired by original [Truffle's Pet Shop tutorial](http://truffleframework.com/tutorials/pet-shop).
 
-However, instead of being lost in space with [`Truffle`](http://truffleframework.com/) it uses a _more functional truffle_ called [`chantrelle`](https://github.com/f-o-a-m/chanterelle).
+<img src="https://raw.githubusercontent.com/sectore/purescript-truffle-pet-shop/master/ps-screen.png" width="60%" height="60%">
 
 
 # Installation
