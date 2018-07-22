@@ -39,7 +39,7 @@ view =
                         [ HP.href "https://ethereum.org/"
                         ]
                         [ HH.text "Ethereum" ]
-                      , HH.text " based smart contract example based on "
+                      , HH.text " based smart contract example by using "
                       , HH.a
                         [ HP.href "https://github.com/f-o-a-m/cliquebait"
                         ]
@@ -57,6 +57,12 @@ view =
                       , HH.a
                         [ HP.href repoUrl ]
                         [ HH.text "other funny things" ]
+                      , HH.text ". "
+                      , HH.text "It's heavily inspired by original "
+                      , HH.a
+                          [ HP.href "http://truffleframework.com/tutorials/pet-shop"
+                          ]
+                          [ HH.text "Truffle's Pet Shop tutorial" ]
                       , HH.text "."
                       ]
                     ]

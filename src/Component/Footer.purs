@@ -17,14 +17,7 @@ view =
       [ HH.p
           [ HU.classNames [ B.content, BT.hasAlignment BT.Centered ]
           ]
-          [ HH.text "Heavily inspired by "
-          , HH.a
-              [ HP.href "http://truffleframework.com/tutorials/pet-shop"
-              ]
-              [ HH.text "Truffle's Pet Shop tutorial" ]
-          , HH.text "."
-          , HH.br_
-          , HH.text "All sources are available at "
+          [ HH.text "All sources are available at "
           , HH.a
               [ HP.href repoUrl
               ]
