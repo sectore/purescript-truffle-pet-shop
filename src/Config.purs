@@ -24,3 +24,6 @@ adaptionAddress =
       Just address -> address
       Nothing -> unsafeCrashWith $
         "Missing environment variable `ADOPTION_ADDRESS` - check README for instruction."
+
+repoUrl :: String
+repoUrl = "https://github.com/sectore/purescript-truffle-pet-shop"

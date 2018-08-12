@@ -3,7 +3,7 @@ module Component.Footer where
 import Bulma.Elements.Elements (content) as B
 import Bulma.Layout.Layout (container, footer) as B
 import Bulma.Modifiers.Typography as BT
-import Const (repoUrl)
+import Config (repoUrl)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import HalogenUtil as HU

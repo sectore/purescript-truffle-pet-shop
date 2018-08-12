@@ -6,11 +6,13 @@ import Prelude
 import Bulma.Common (Color(Danger, Warning, Success)) as B
 import Bulma.Elements.Elements (delete, notification) as B
 import Bulma.Modifiers.Modifiers as BModifier
+import Control.Monad.Aff.Class (class MonadAff)
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import HalogenUtil as HU
+import Types (Fx)
 
 data Slot = NotificationSlot NotificationLevel
 derive instance eqSlot :: Eq Slot
@@ -42,7 +44,8 @@ mkNotification level msgs = { level, msgs }
 
 view
   :: forall m
-   . H.Component HH.HTML Query Notification Message m
+   . MonadAff Fx m
+  => H.Component HH.HTML Query Notification Message m
 view =
   H.component
     { initialState: id
@@ -76,8 +79,9 @@ render {level, msgs} =
     ]
 
 eval :: forall m. Query ~> H.ComponentDSL Notification Query Message m
-eval (Close next) = do
-  H.raise NotififyClose
-  pure next
-eval (HandleInput _ next) =
-  pure next
+eval = case _ of
+  Close next -> do
+    H.raise NotififyClose
+    pure next
+  HandleInput _ next ->
+    pure next

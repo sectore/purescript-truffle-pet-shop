@@ -12,8 +12,10 @@ import Component.PetList as PL
 import Contract.Adoption as Adoption
 import Control.Error.Util (hush)
 import Control.Monad.Aff (Aff, error, killFiber, launchAff, launchAff_)
+import Control.Monad.Aff.Class (class MonadAff)
 import Control.Monad.Eff.Exception (try)
 import Control.Monad.Except (runExcept)
+import Control.Monad.Reader (class MonadAsk, ask)
 import Control.Monad.State (class MonadState)
 import Data.Array (head, index)
 import Data.Either (Either(Left, Right))
@@ -25,6 +27,7 @@ import Data.FunctorWithIndex (mapWithIndex)
 import Data.Lens ((.~), (?~))
 import Data.Maybe (Maybe(..), fromJust, isNothing, maybe)
 import Data.Newtype (over)
+import Environment (Env)
 import Halogen (liftEff)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
@@ -35,7 +38,7 @@ import HalogenUtil (emptyView)
 import HalogenUtil as HU
 import Network.Ethereum.Core.BigNumber (unsafeToInt)
 import Network.Ethereum.Core.Signatures (Address, mkAddress)
-import Network.Ethereum.Web3 (CallError, ChainCursor(..), EventAction(..), Provider, Vector, Web3Error, _from, _to, defaultTransactionOptions, embed, event, eventFilter, metamaskProvider, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
+import Network.Ethereum.Web3 (CallError, ChainCursor(Latest), EventAction(ContinueEvent), Provider, Vector, Web3Error, _from, _to, defaultTransactionOptions, embed, event, eventFilter, metamaskProvider, mkHexString, runWeb3, uIntNFromBigNumber, unUIntN)
 import Network.Ethereum.Web3.Api (eth_getAccounts)
 import Network.Ethereum.Web3.Solidity (unVector)
 import Network.Ethereum.Web3.Solidity.Sizes (S16, s256)
@@ -88,7 +91,7 @@ initialState =
   }
 
 data Query a
-  = Init Address a
+  = Init a
   | Adopted Adoption.Adopted a
   | HandlePetListMessage PL.Message a
   | HandleNotificationMessage N.NotificationLevel N.Message a
@@ -96,7 +99,11 @@ data Query a
 type AppFx = Aff Fx
 
 
-view :: H.Component HH.HTML Query Unit Void AppFx
+view
+  :: forall m
+   . MonadAff Fx m
+  => MonadAsk Env m
+  => H.Component HH.HTML Query Unit Void m
 view = H.parentComponent
   { initialState: const initialState
   , render
@@ -104,134 +111,145 @@ view = H.parentComponent
   , receiver: const Nothing
   }
   where
-  render :: State -> H.ParentHTML Query ChildQuery ChildSlot AppFx
-  render { mErrors, mWarnings, mInfos, pets } =
-    HH.div
-      [ HU.className B.container ]
-      [ maybeNotificationView mErrors N.Error
-      , maybeNotificationView mWarnings N.Warning
-      , maybeNotificationView mInfos N.Success
-      , Header.view
-      , case pets of
-          Nothing -> HH.text ""
-          Just (Left err) -> emptyView
-          Just (Right pets') ->
-            HH.slot'
-              petListPath
-              PetListSlot
-              PL.view
-              pets'
-              (HE.input HandlePetListMessage)
-      , Footer.view
-      ]
-  eval :: Query ~> H.ParentDSL State Query ChildQuery ChildSlot Void AppFx
-  eval (Init contractAddress next) = do
-    -- initial data are loaded from json
-    result <- H.liftAff $ Ajax.get ("./json/pets.json")
-    let (response :: Either MultipleErrors Pets) = runExcept $ decodeJSON result.response
-    case response of
-      Right petsFromJSON -> do
-        provider <- H.liftEff $ try metamaskProvider
-        case provider of
-          Right provider' -> do
-            mPrimaryAccount <- H.liftAff $ maybe Nothing (head) <<< hush <$> runWeb3 provider' eth_getAccounts
-            when (isNothing mPrimaryAccount) $ do
-                errMsg <- updateErrorMsgFromState "Primary account not found. Make sure that you have logged in into MetaMask."
-                H.modify (_ { mErrors = errMsg
-                            })
-            H.modify (_ { primaryAccount = mPrimaryAccount, contractAddress = Just contractAddress } )
+    render
+      :: State
+      -> H.ParentHTML Query ChildQuery ChildSlot m
+    render { mErrors, mWarnings, mInfos, pets } =
+      HH.div
+        [ HU.className B.container ]
+        [ maybeNotificationView mErrors N.Error
+        , maybeNotificationView mWarnings N.Warning
+        , maybeNotificationView mInfos N.Success
+        , Header.view
+        , case pets of
+            Nothing -> HH.text ""
+            Just (Left err) -> emptyView
+            Just (Right pets') ->
+              HH.slot'
+                petListPath
+                PetListSlot
+                PL.view
+                pets'
+                (HE.input HandlePetListMessage)
+        , Footer.view
+        ]
 
-            let txOpts = defaultTransactionOptions
-                        # _to ?~ contractAddress
-            -- adopters
-            adopters <- H.liftAff $ runWeb3 provider' $ Adoption.getAdopters txOpts Latest
-            case adopters of
-              -- Result
-              Right (Right adopters') -> do
-                let pets' = setAdoptedByContract petsFromJSON adopters'
-                H.modify (_ { pets = Just $ Right pets' } )
-                -- subscribe `Adopted` event
-                H.subscribe $ ES.eventSource' (\emit -> do
-                    let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) contractAddress
-                    fiber <- launchAff $ runWeb3 provider' $ event filterAdopted $
-                                \event -> do
-                                  -- liftAff $ C.log $ "Received Adopted event: " <> show event
-                                  liftEff $ emit event
-                                  pure ContinueEvent
-                    pure $ launchAff_ $ killFiber (error "cleanup") fiber
-                  )
-                  (Just <<< flip Adopted ES.Listening)
+    eval
+      :: Query
+      ~> H.ParentDSL State Query ChildQuery ChildSlot Void m
+    eval = case _ of
+      (Init  next) -> do
+        {contractAddress} <- ask
+        -- initial data are loaded from json
+        result <- H.liftAff $ Ajax.get ("./json/pets.json")
+        let (response :: Either MultipleErrors Pets) = runExcept $ decodeJSON result.response
+        case response of
+          Right petsFromJSON -> do
+            provider <- H.liftEff $ try metamaskProvider
+            case provider of
+              Right provider' -> do
+                mPrimaryAccount <- H.liftAff $ maybe Nothing (head) <<< hush <$> runWeb3 provider' eth_getAccounts
+                when (isNothing mPrimaryAccount) $ do
+                    errMsg <- updateErrorMsgFromState "Primary account not found. Make sure that you have logged in into MetaMask."
+                    H.modify (_ { mErrors = errMsg
+                                })
+                H.modify (_ { primaryAccount = mPrimaryAccount, contractAddress = Just contractAddress } )
 
-              -- CallError
-              Right (Left callError) -> do
-                errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have all smart contracts deployed before."
-                H.modify (_ { mErrors = errMsg
-                            , pets = Just $ Left $ PetsCallError callError
-                            })
-              -- Web3Error
-              Left web3Error -> do
-                errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have Metamask enabled and you are logged in."
-                H.modify (_ { mErrors = errMsg
-                            , pets = Just $ Left $ PetsWeb3Error web3Error
-                            })
-          Left error -> do
-            errMsg <- updateErrorMsgFromState "No Metamask provider found. Get Metamask at https://metamask.io/"
-            H.modify (_ { mErrors = errMsg })
-      -- MultipleErrors
-      Left foreignErrors -> do
-        errMsg <- updateErrorMsgFromState "Parsing of `pets.json` failed"
-        H.modify (_ { mErrors = errMsg
-                    , pets = Just $ Left $ PetsJsonError foreignErrors
-                    })
-    pure next
-  eval (Adopted (Adoption.Adopted {petId}) next) = do
-    {pets} <- H.get
-    case pets of
-      Just (Right pets') -> do
-        let petId' = unsafeToInt $ unUIntN petId
-        H.modify _ { pets = Just $ Right $ setLoadedById petId' false $ setAdoptedById petId' pets'
-                   }
-      _ ->
-        pure unit
-    pure next
-  eval (HandlePetListMessage msg next) = do
-    case msg of
-      PL.NotifyAdoptPet petId -> do
-        {contractAddress, primaryAccount, pets} <- H.get
+                let txOpts = defaultTransactionOptions
+                            # _to ?~ contractAddress
+                -- adopters
+                adopters <- H.liftAff $ runWeb3 provider' $ Adoption.getAdopters txOpts Latest
+                case adopters of
+                  -- Result
+                  Right (Right adopters') -> do
+                    let pets' = setAdoptedByContract petsFromJSON adopters'
+                    H.modify (_ { pets = Just $ Right pets' } )
+                    -- subscribe `Adopted` event
+                    H.subscribe $ ES.eventSource' (\emit -> do
+                        let filterAdopted = eventFilter (Proxy :: Proxy Adoption.Adopted) contractAddress
+                        fiber <- launchAff $ runWeb3 provider' $ event filterAdopted $
+                                    \event -> do
+                                      -- liftAff $ C.log $ "Received Adopted event: " <> show event
+                                      liftEff $ emit event
+                                      pure ContinueEvent
+                        pure $ launchAff_ $ killFiber (error "cleanup") fiber
+                      )
+                      (Just <<< flip Adopted ES.Listening)
+
+                  -- CallError
+                  Right (Left callError) -> do
+                    errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have all smart contracts deployed before."
+                    H.modify (_ { mErrors = errMsg
+                                , pets = Just $ Left $ PetsCallError callError
+                                })
+                  -- Web3Error
+                  Left web3Error -> do
+                    errMsg <- updateErrorMsgFromState "Loading addresses of adopters failed. Make sure that you have Metamask enabled and you are logged in."
+                    H.modify (_ { mErrors = errMsg
+                                , pets = Just $ Left $ PetsWeb3Error web3Error
+                                })
+              Left error -> do
+                errMsg <- updateErrorMsgFromState "No Metamask provider found. Get Metamask at https://metamask.io/"
+                H.modify (_ { mErrors = errMsg })
+          -- MultipleErrors
+          Left foreignErrors -> do
+            errMsg <- updateErrorMsgFromState "Parsing of `pets.json` failed"
+            H.modify (_ { mErrors = errMsg
+                        , pets = Just $ Left $ PetsJsonError foreignErrors
+                        })
+        pure next
+
+      Adopted (Adoption.Adopted {petId}) next -> do
+        {pets} <- H.get
         case pets of
           Just (Right pets') -> do
-            provider <- H.lift $ H.liftEff metamaskProvider
-            let bPetId = embed petId
-            let uPetId = unsafePartial $ fromJust $ uIntNFromBigNumber s256 bPetId
-            -- Set loading state while adopting a pet
-            H.modify _ { pets = Just $ Right $ setLoadedById petId true pets' }
-            let txOpts = defaultTransactionOptions
-                        # _from .~ primaryAccount
-                        # _to .~ contractAddress
-            tx <- H.lift $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
-            case tx of
-              Right tx' ->
-                H.modify _ { mInfos = Just ["Sending adopt tx succeeded: " <> show tx']
-                           }
-              Left err -> do
-                errMsg <- updateErrorMsgFromState $ "Sending adopt tx failed: " <> show err
-                H.modify _ { mErrors = errMsg
-                           , pets = Just $ Right $ setLoadedById petId false pets'
-                           }
+            let petId' = unsafeToInt $ unUIntN petId
+            H.modify _ { pets = Just $ Right $ setLoadedById petId' false $ setAdoptedById petId' pets'
+                        }
           _ ->
             pure unit
+        pure next
 
-    pure next
-  eval (HandleNotificationMessage level msg next) = do
-    case msg of
-      N.NotififyClose ->
-        let newState = case level of
-                  N.Warning -> _ { mWarnings = Nothing }
-                  N.Error ->  _ { mErrors = Nothing }
-                  N.Success ->  _ { mInfos = Nothing }
-        in
-          H.modify newState
-    pure next
+      HandlePetListMessage msg next -> do
+        case msg of
+          PL.NotifyAdoptPet petId -> do
+            {contractAddress, primaryAccount, pets} <- H.get
+            case pets of
+              Just (Right pets') -> do
+                provider <- H.lift $ H.liftEff metamaskProvider
+                let bPetId = embed petId
+                let uPetId = unsafePartial $ fromJust $ uIntNFromBigNumber s256 bPetId
+                -- -- Set loading state while adopting a pet
+                H.modify _ { pets = Just $ Right $ setLoadedById petId true pets' }
+                let txOpts = defaultTransactionOptions
+                            # _from .~ primaryAccount
+                            # _to .~ contractAddress
+                tx <- H.liftAff $ runWeb3 provider $ Adoption.adopt txOpts {petId: uPetId}
+                pure unit
+                case tx of
+                  Right tx' ->
+                    H.modify _ { mInfos = Just ["Sending adopt tx succeeded: " <> show tx']
+                              }
+                  Left err -> do
+                    errMsg <- updateErrorMsgFromState $ "Sending adopt tx failed: " <> show err
+                    H.modify _ { mErrors = errMsg
+                              , pets = Just $ Right $ setLoadedById petId false pets'
+                              }
+              _ ->
+                pure unit
+
+        pure next
+
+      HandleNotificationMessage level msg next -> do
+        case msg of
+          N.NotififyClose ->
+            let newState = case level of
+                      N.Warning -> _ { mWarnings = Nothing }
+                      N.Error ->  _ { mErrors = Nothing }
+                      N.Success ->  _ { mInfos = Nothing }
+            in
+              H.modify newState
+        pure next
 
 updateErrorMsgFromState
   :: forall m
@@ -243,9 +261,12 @@ updateErrorMsgFromState msg = do
   pure $ mErrors <> Just [msg]
 
 maybeNotificationView
-  :: Maybe (Array String)
+  :: forall env m
+   . MonadAff Fx m
+  => MonadAsk env m
+  => Maybe (Array String)
   -> N.NotificationLevel
-  -> H.ParentHTML Query ChildQuery ChildSlot AppFx
+  -> H.ParentHTML Query ChildQuery ChildSlot m
 maybeNotificationView mMsgs level =
   case mMsgs of
   Nothing -> emptyView

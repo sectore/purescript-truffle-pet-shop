@@ -4,7 +4,7 @@ module Component.Header where
 import Bulma.Common (Is(Is4, Is1)) as B
 import Bulma.Elements.Title as BTitle
 import Bulma.Layout.Layout (HeroColor(Light), hero, heroBody, isHeroColor) as B
-import Const (repoUrl)
+import Config (repoUrl)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
 import HalogenUtil as HU
